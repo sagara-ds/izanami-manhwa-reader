@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Izanami — Manga Reader Indonesia</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0d0d; --surface:#1a1a1a; --card:#1f1f1f;
+  --text:#f4f4f5; --muted:#a1a1aa; --subtle:#52525b;
+  --accent-v:#7c3aed; --accent-c:#06b6d4; --border:#27272a;
+  --font: 'Inter',system-ui,sans-serif; --font-dm:'DM Sans',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.35;}
+
+/* Nav */
+.nav{position:sticky;top:0;z-index:50;background:rgba(13,13,13,.85);backdrop-filter:blur(14px) saturate(1.2);border-bottom:1px solid var(--border);padding:1rem 2.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+.nav a{color:var(--muted);text-decoration:none;font-size:.85rem;font-weight:500;letter-spacing:.02em;transition:color .15s;} .nav a:hover{color:var(--text);}
+.nav-brand{font-family:var(--font-dm);font-weight:800;font-size:1.3rem;color:var(--text);letter-spacing:-.03em;background:linear-gradient(135deg,var(--accent-v),var(--accent-c));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.nav-user{width:36px;height:36px;border-radius:9999px;background:linear-gradient(135deg,#4c1d95,#0891b2);display:grid;place-items:center;font-size:.75rem;font-weight:700;color:#fff;cursor:pointer;border:1px solid rgba(255,255,255,.08);}
+
+/* Announcement */
+.announce{width:100%;padding:.55rem 2.5rem;background:linear-gradient(90deg,#3b0764 .5%,#155e75 60%,#0e7490);border-bottom:1px solid rgba(255,255,255,.06);font-family:var(--font-dm);font-size:.8rem;font-weight:600;color:#fff;letter-spacing:.02em;text-align:center;position:relative;overflow:hidden;}
+.announce::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);animation:shimmer 3s infinite linear;}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* Layout */
+.container{max-width:1280px;margin:0 auto;padding:2rem 2.5rem;}
+.section{margin-bottom:2.5rem;}
+.section h2{font-family:var(--font-dm);font-size:1.35rem;font-weight:700;letter-spacing:-.03em;margin-bottom:1rem;color:var(--text);display:flex;align-items:center;gap:.6rem;}
+.section h2::before{content:'';width:4px;height:22px;border-radius:999px;background:linear-gradient(180deg,var(--accent-v),var(--accent-c));flex-shrink:0;}
+
+/* Tabs */
+.tabs{display:flex;gap:.35rem;margin-bottom:1.1rem;flex-wrap:wrap;}
+.tabs button{background:transparent;border:1px solid var(--border);color:var(--muted);padding:.35rem .75rem;border-radius:999px;font-family:var(--font);font-size:.78rem;font-weight:500;cursor:pointer;transition:all .15s;}
+.tabs button.active{background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.35);color:#ddd6fe;}
+.tabs button:hover:not(.active){color:var(--text);border-color:#3f3f46;}
+
+/* Card grid dense */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:1rem;}
+.card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:transform .15s ease,box-shadow .2s ease;cursor:pointer;}
+.card:hover{transform:scale(1.02);box-shadow:0 0 28px rgba(124,58,237,.15),0 0 40px rgba(6,182,212,.08);border-color:rgba(124,58,237,.25);z-index:2;}
+.card img{width:100%;aspect-ratio:3/4.2;object-fit:cover;display:block;background:#18181b;filter:saturate(.9) contrast(1.05);}
+.card-info{padding:.65rem .75rem;}
+.card-info h3{font-family:var(--font-dm);font-size:.82rem;font-weight:700;color:var(--text);letter-spacing:-.01em;line-height:1.2;margin-bottom:.35rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.card-meta{display:flex;gap:.3rem;flex-wrap:wrap;align-items:center;font-size:.68rem;color:var(--subtle);}
+.badge{padding:.12rem .35rem;border-radius:4px;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.02em;background:rgba(124,58,237,.1);color:#b8a0ff;}
+.card-views{margin-left:auto;color:#52525b;font-weight:500;}
+
+/* Footer */
+.footer{margin-top:3rem;padding:2rem 2.5rem;border-top:1px solid var(--border);text-align:center;color:var(--subtle);font-size:.75rem;font-family:var(--font-dm);}
+.footer a{color:var(--muted);text-decoration:none;}
+</style>
+</head>
+<body>
+
+<!-- Announcement Banner -->
+<div class="announce">📢 Shinigami.asia API terhubung — baca manga Indonesia langsung dari sumber terpercaya • Manhwa • Manga • Manhua</div>
+
+<!-- Navigation -->
+<nav class="nav" aria-label="Primary">
+  <a href="#" class="nav-brand">Izanami</a>
+  <div style="display:flex;gap:2rem;align-items:center;">
+    <a href="#">Home</a><a href="#">Explore</a><a href="#">Library</a>
+    <a href="#">Search</a>
+    <div class="nav-user" aria-label="User">KA</div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Rekomendasi -->
+  <section class="section" aria-label="Rekomendasi">
+    <h2>Rekomendasi</h2>
+    <div class="tabs" role="tablist">
+      <button class="active" onclick="this.classList.add('active');siblings(this,'button').forEach(s=>s.classList.remove('active'));filterRekomendasi('Manhwa')" aria-selected="true">Manhwa</button>
+      <button onclick="this.classList.add('active');siblings(this,'button').forEach(s=>s.classList.remove('active'));filterRekomendasi('Manga')" aria-selected="false">Manga</button>
+      <button onclick="this.classList.add('active');siblings(this,'button').forEach(s=>s.classList.remove('active'));filterRekomendasi('Manhua')" aria-selected="false">Manhua</button>
+    </div>
+    <div class="grid" role="list">
+      <a href="#" class="card" data-genre="Manhwa" role="listitem" aria-label="Solo Leveling">
+        <img src="https://mangadex.org/covers/1892/8b08e2b5-388e-44e7-af40-4b93d0bb0216.jpg" alt="Solo Leveling" loading="lazy">
+        <div class="card-info"><h3>Solo Leveling</h3><div class="card-meta"><span class="badge">Action</span><span class="card-views">1.2M</span></div></div>
+      </a>
+      <a href="#" class="card" data-genre="Manhwa" role="listitem" aria-label="The Beginning After The End">
+        <img src="https://mangadex.org/covers/43e9c63f-e253-4e3b-8e95-8a82a7742fa9/1.jpg" alt="TBATE" loading="lazy">
+        <div class="card-info"><h3>The Beginning After The End</h3><div class="card-meta"><span class="badge">Fantasy</span><span class="card-views">980K</span></div></div>
+      </a>
+      <a href="#" class="card" data-genre="Manhwa" role="listitem" aria-label="Omniscient Reader">
+        <img src="https://mangadex.org/covers/38f3c85e-577c-4deb-a63e-8c6a88bef92e/4.jpg" alt="Omniscient Reader" loading="lazy">
+        <div class="card-info"><h3>Omniscient Reader's Viewpoint</h3><div class="card-meta"><span class="badge">Fantasy</span><span class="card-views">850K</span></div></div>
+      </a>
+      <a href="#" class="card" data-genre="Manga" role="listitem" aria-label="Legend of Northern Blade">
+        <img src="https://mangadex.org/covers/06690a94-16c6-4350-8cf9-89e0355d4e3b/3.jpg" alt="Legend of Northern Blade" loading="lazy">
+        <div class="card-info"><h3>Legend of the Northern Blade</h3><div class="card-meta"><span class="badge">Action</span><span class="card-views">720K</span></div></div>
+      </a>
+      <a href="#" class="card" data-genre="Manhua" role="listitem" aria-label="Nano Machine">
+        <img src="https://mangadex.org/covers/86e2523d-192e-4171-87ed-1bebe0efa87a/1.jpg" alt="Nano Machine" loading="lazy">
+        <div class="card-info"><h3>Nano Machine</h3><div class="card-meta"><span class="badge">Sci-Fi</span><span class="card-views">640K</span></div></div>
+      </a>
+    </div>
+  </section>
+
+  <!-- Populer -->
+  <section class="section" aria-label="Populer">
+    <h2>Populer</h2>
+    <div class="tabs" role="tablist">
+      <button class="active" onclick="this.classList.add('active');siblings(this,'button').forEach(s=>s.classList.remove('active'));filterPopuler('Harian')">Harian</button>
+      <button onclick="this.classList.add('active');siblings(this,'button').forEach(s=>s.classList.remove('active'));filterPopuler('Mingguan')">Mingguan</button>
+      <button onclick="this.classList.add('active');siblings(this,'button').forEach(s=>s.classList.remove('active'));filterPopuler('Semua')">Semua</button>
+    </div>
+    <div class="grid populer-grid" role="list">
+      <a href="#" class="card" role="listitem" aria-label="Tower of God">
+        <img src="https://mangadex.org/covers/8a0396a2-35c5-4dab-8ed2-541bcfc9844e/1.jpg" alt="Tower of God" loading="lazy">
+        <div class="card-info"><h3>Tower of God</h3><div class="card-meta"><span class="badge">Adventure</span><span class="card-views">2.1M</span></div></div>
+      </a>
+      <a href="#" class="card" data-time="Harian" role="listitem" aria-label="Return of the Broken Legendary Ranker">
+        <img src="https://mangadex.org/covers/1c58e2c4-9e4d-4a59-b8f5-3ba520be09f8/2.jpg" alt="Broken Legendary Ranker" loading="lazy">
+        <div class="card-info"><h3>Return of the Broken Legendary Ranker</h3><div class="card-meta"><span class="badge">Action</span><span class="card-views">1.8M</span></div></div>
+      </a>
+      <a href="#" class="card" data-time="Mingguan" role="listitem" aria-label="I Am the Sorcerer King">
+        <img src="https://mangadex.org/covers/9495eb99-f3c0-4c3f-b982-c0ac3fd33287/1.jpg" alt="Sorcerer King" loading="lazy">
+        <div class="card-info"><h3>I Am the Sorcerer King</h3><div class="card-meta"><span class="badge">Fantasy</span><span class="card-views">1.5M</span></div></div>
+      </a>
+      <a href="#" class="card" data-time="Mingguan" role="listitem" aria-label="The Scholar's Reincarnation">
+        <img src="https://mangadex.org/covers/79f9fc9e-f374-43c5-a0cb-3ce7dbc6e6b4/1.jpg" alt="Scholar's Reincarnation" loading="lazy">
+        <div class="card-info"><h3>The Scholar's Reincarnation</h3><div class="card-meta"><span class="badge">Fantasy</span><span class="card-views">1.3M</span></div></div>
+      </a>
+    </div>
+  </section>
+</div>
+
+<footer class="footer">
+  <p>Izanami — Manga Reader Indonesia · Stack: <strong>Next.js + Tailwind</strong> / <strong>Node.js</strong> / <strong>PostgreSQL</strong> · Data via <a href="#">shinigami.asia</a> API</p>
+</footer>
+
+<script>
+function siblings(el,sel){return Array.from(el.parentNode.querySelectorAll(sel)).filter(s=>s!==el)}
+
+// Filter tab Rekomendasi: Manhwa / Manga / Manhua
+function filterRekomendasi(type) {
+  document.querySelectorAll('.rekom-grid .card').forEach(c => {
+    const genre = c.getAttribute('data-genre') || '';
+    c.style.display = (type === 'Semua' || genre === type) ? '' : 'none';
+  });
+}
+
+// Filter tab Populer: Harian / Mingguan / Semua
+function filterPopuler(type) {
+  document.querySelectorAll('.populer-grid .card').forEach(c => {
+    const time = c.getAttribute('data-time') || '';
+    c.style.display = (type === 'Semua' || time === type) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

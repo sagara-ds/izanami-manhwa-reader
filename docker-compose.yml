@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: izanami
+      POSTGRES_PASSWORD: izanami_dev_only
+      POSTGRES_DB: izanami
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./server/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://izanami:izanami_dev_only@db:5432/izanami
+      CORS_ORIGIN: http://localhost:3000
+      PORT: "4000"
+    ports:
+      - "4000:4000"
+
+volumes:
+  pgdata:

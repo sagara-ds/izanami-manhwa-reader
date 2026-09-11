@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="id" class="dark" data-theme="amoled">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3">
+<title>Izanami Reader — Solo Leveling Ch. 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&family=DM+Sans:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050505; --surface:#0a0a0a; --card:#0f0f0f;
+  --text:#f4f4f5; --muted:#a1a1aa; --subtle:#52525b;
+  --accent-v:#7c3aed; --accent-c:#06b6d4;
+  --border:#1a1a1a;
+  --font:'Inter',system-ui,sans-serif; --font-dm:'DM Sans',system-ui,sans-serif;
+  --amoled:#000;
+}
+*{margin:0;padding:0;box-sizing:border-box;touch-action:manipulation;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font);background:var(--amoled);color:var(--text);line-height:1.35;overflow:hidden;height:100vh;width:100vw;}
+
+/* AMOLED pure black reader surface */
+.reader-surface{background:#000;height:100vh;width:100vw;overflow-y:auto;overflow-x:hidden;position:relative;scroll-snap-type:y mandatory;scrollbar-width:none;}
+.reader-surface::-webkit-scrollbar{display:none;}
+
+/* Page image — full bleed vertical like webtoon */
+.page-img{display:block;width:100%;max-width:820px;margin:0 auto;object-fit:contain;filter:brightness(.96) contrast(1.08);scroll-snap-align:start;scroll-snap-stop:always;}
+
+/* Reader info bar — Kotatsu style: chapter/page/progress/time/battery */
+.info-bar{position:fixed;top:0;left:0;right:0;z-index:60;height:56px;background:linear-gradient(180deg,rgba(5,5,5,.92) 40%,rgba(5,5,5,0));backdrop-filter:blur(8px);padding:0 1rem;display:flex;align-items:center;justify-content:space-between;pointer-events:none;transition:opacity .25s ease;opacity:1;}
+.info-bar.hidden{opacity:0;pointer-events:none;}
+.info-bar .info-left{display:flex;align-items:center;gap:.6rem;font-size:.72rem;color:#e4e4e7;font-weight:500;letter-spacing:.01em;pointer-events:auto;}
+.info-bar .info-right{display:flex;align-items:center;gap:.7rem;font-size:.7rem;color:#a1a1aa;font-weight:400;pointer-events:auto;}
+.info-bar .chapter-badge{background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);color:#ddd6fe;padding:.15rem .45rem;border-radius:6px;font-size:.65rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;font-family:var(--font-dm);}
+.info-bar .page-indicator{font-variant-numeric:tabular-nums;color:#f4f4f5;font-weight:600;font-size:.75rem;}
+.info-bar .progress{font-family:var(--font-dm);font-weight:700;color:var(--accent-c);font-size:.7rem;background:rgba(6,182,212,.08);padding:.15rem .4rem;border-radius:4px;}
+
+/* Bottom toolbar — Kotatsu ReaderActionsView style */
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;z-index:60;height:64px;background:linear-gradient(0deg,rgba(5,5,5,.96) 50%,rgba(5,5,5,0));display:flex;align-items:center;justify-content:center;gap:.6rem;padding:0 1rem;transition:opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
+.bottom-bar.hidden{opacity:0;pointer-events:none;transform:translateY(20px);}
+
+/* Toolbar buttons — minimal icon buttons */
+.toolbar-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#e4e4e7;border-radius:10px;width:44px;height:44px;display:grid;place-items:center;cursor:pointer;transition:all .15s;font-size:1.1rem;pointer-events:auto;}
+.toolbar-btn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.18);transform:scale(1.05);}
+.toolbar-btn:active{transform:scale(.95);}
+.toolbar-btn.active{background:rgba(124,58,237,.18);border-color:rgba(124,58,237,.35);color:#ddd6fe;}
+
+/* Page navigation arrows overlay — tap zones */
+.tap-zone{position:fixed;top:56px;bottom:64px;z-index:20;width:28%;height:calc(100vh - 120px);display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;transition:background .15s;pointer-events:auto;}
+.tap-zone:hover{background:rgba(124,58,237,.03);}
+.tap-zone.prev{left:0;}
+.tap-zone.next{right:0;}
+.tap-zone.center{left:28%;width:44%;pointer-events:none;opacity:0;}
+.tap-zone.prev::after{content:'';width:28px;height:28px;border-left:2px solid rgba(255,255,255,.15);border-bottom:2px solid rgba(255,255,255,.15);transform:rotate(45deg);display:block;}
+.tap-zone.next::after{content:'';width:28px;height:28px;border-right:2px solid rgba(255,255,255,.15);border-top:2px solid rgba(255,255,255,.15);transform:rotate(45deg);display:block;}
+
+/* Chapter title overlay — like Kotatsu details sheet */
+.chapter-header{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:55;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.06);padding:.5rem 1rem;border-radius:999px;font-family:var(--font-dm);font-size:.75rem;font-weight:700;color:#f4f4f5;letter-spacing:-.01em;pointer-events:none;transition:opacity .2s ease;opacity:.9;}
+.chapter-header.hidden{opacity:0;}
+
+/* Loading toast — Kotatsu ToastView */
+.toast{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:rgba(10,10,10,.92);border:1px solid rgba(255,255,255,.08);color:#e4e4e7;padding:.5rem 1rem;border-radius:999px;font-size:.75rem;font-weight:500;z-index:70;opacity:0;transition:opacity .2s ease;pointer-events:none;font-family:var(--font-dm);}
+.toast.show{opacity:1;}
+
+/* Zoom indicator */
+.zoom-indicator{position:fixed;top:14px;right:1rem;z-index:55;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.25);color:#ddd6fe;padding:.2rem .5rem;border-radius:6px;font-size:.65rem;font-weight:700;font-family:var(--font-dm);pointer-events:none;opacity:.85;}
+
+/* Responsive: landscape wider */
+@media(min-width:900px){
+  .page-img{max-width:640px;}
+  .tap-zone{width:22%;}
+  .tap-zone.center{left:22%;width:56%;}
+}
+</style>
+</head>
+<body>
+
+<!-- Chapter header -->
+<div class="chapter-header" id="chapterHeader" aria-label="Chapter info">Solo Leveling — Chapter 1</div>
+
+<!-- Info bar -->
+<header class="info-bar" id="infoBar" aria-label="Reader info">
+  <div class="info-left" aria-label="Chapter info">
+    <span class="chapter-badge">Ch 1</span>
+    <span style="color:#a1a1aa;font-size:.7rem;">Solo Leveling</span>
+  </div>
+  <div class="info-right" aria-label="Progress and system info">
+    <span class="page-indicator" id="pageIndicator">1 / 28</span>
+    <span class="progress" id="progressText">3%</span>
+    <span style="font-variant-numeric:tabular-nums;color:#a1a1aa;" id="clock">12:34</span>
+    <span aria-label="Battery">92%</span>
+  </div>
+</header>
+
+<!-- Reader surface -->
+<main class="reader-surface" id="readerSurface" aria-label="Manga reader content">
+  <!-- Page images — simulating manga pages -->
+  <img class="page-img" src="https://mangadex.org/covers/1892/8b08e2b5-388e-44e7-af40-4b93d0bb0216.jpg" alt="Solo Leveling — Page 1" loading="eager">
+  <img class="page-img" src="https://mangadex.org/covers/43e9c63f-e253-4e3b-8e95-8a82a7742fa9/1.jpg" alt="Solo Leveling — Page 2" loading="lazy">
+  <img class="page-img" src="https://mangadex.org/covers/38f3c85e-577c-4deb-a63e-8c6a88bef92e/4.jpg" alt="Solo Leveling — Page 3" loading="lazy">
+  <img class="page-img" src="https://mangadex.org/covers/06690a94-16c6-4350-8cf9-89e0355d4e3b/3.jpg" alt="Solo Leveling — Page 4" loading="lazy">
+  <img class="page-img" src="https://mangadex.org/covers/86e2523d-192e-4171-87ed-1bebe0efa87a/1.jpg" alt="Solo Leveling — Page 5" loading="lazy">
+</main>
+
+<!-- Tap zones for navigation -->
+<div class="tap-zone prev" onclick="prevPage()" aria-label="Previous page" title="Previous page"></div>
+<div class="tap-zone center" onclick="toggleUI()" aria-label="Toggle UI" title="Toggle UI"></div>
+<div class="tap-zone next" onclick="nextPage()" aria-label="Next page" title="Next page"></div>
+
+<!-- Bottom toolbar -->
+<nav class="bottom-bar" id="bottomBar" aria-label="Reader controls">
+  <button class="toolbar-btn" onclick="prevPage()" aria-label="Previous page" title="Prev">
+    <span aria-hidden="true">◀</span>
+  </button>
+  <button class="toolbar-btn" onclick="toggleUI()" aria-label="Toggle UI" title="Toggle controls">
+    <span aria-hidden="true">◉</span>
+  </button>
+  <button class="toolbar-btn" onclick="nextPage()" aria-label="Next page" title="Next">
+    <span aria-hidden="true">▶</span>
+  </button>
+  <button class="toolbar-btn" onclick="zoomIn()" aria-label="Zoom in" title="Zoom">
+    <span aria-hidden="true">+</span>
+  </button>
+  <button class="toolbar-btn" onclick="bookmarkPage()" aria-label="Bookmark" title="Bookmark">
+    <span aria-hidden="true">★</span>
+  </button>
+  <button class="toolbar-btn active" onclick="goDetails()" aria-label="Chapter details" title="Details">
+    <span aria-hidden="true">≡</span>
+  </button>
+</nav>
+
+<!-- Zoom indicator -->
+<div class="zoom-indicator" id="zoomIndicator">100%</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="status" aria-live="polite">Page 1</div>
+
+<script>
+// Kotatsu-style reader interactions
+let uiHidden = false;
+let zoomLevel = 1;
+let currentPage = 1;
+const totalPages = 28;
+
+function toggleUI() {
+  uiHidden = !uiHidden;
+  document.getElementById('infoBar').classList.toggle('hidden', uiHidden);
+  document.getElementById('bottomBar').classList.toggle('hidden', uiHidden);
+  document.getElementById('chapterHeader').classList.toggle('hidden', uiHidden);
+}
+
+function prevPage() {
+  if (currentPage > 1) { currentPage--; scrollToPage(); }
+  else showToast('Halaman pertama');
+}
+function nextPage() {
+  if (currentPage < totalPages) { currentPage++; scrollToPage(); }
+  else showToast('Halaman terakhir');
+}
+
+function scrollToPage() {
+  const surface = document.getElementById('readerSurface');
+  const pages = surface.querySelectorAll('.page-img');
+  if (pages[currentPage - 1]) {
+    pages[currentPage - 1].scrollIntoView({behavior:'smooth', block:'start'});
+  }
+  updateUI();
+  showToast('Halaman ' + currentPage);
+}
+
+function updateUI() {
+  document.getElementById('pageIndicator').textContent = currentPage + ' / ' + totalPages;
+  const pct = Math.round((currentPage / totalPages) * 100);
+  document.getElementById('progressText').textContent = pct + '%';
+}
+
+function zoomIn() {
+  zoomLevel = Math.min(zoomLevel + 0.2, 2.5);
+  document.querySelectorAll('.page-img').forEach(img => {
+    img.style.transform = 'scale(' + zoomLevel + ')';
+  });
+  document.getElementById('zoomIndicator').textContent = Math.round(zoomLevel * 100) + '%';
+}
+
+function bookmarkPage() {
+  showToast('Bookmark halaman ' + currentPage);
+  document.querySelector('.toolbar-btn[aria-label="Bookmark"]').classList.add('active');
+  setTimeout(() => document.querySelector('.toolbar-btn[aria-label="Bookmark"]').classList.remove('active'), 800);
+}
+
+function goDetails() {
+  showToast('Chapter Details — akan dibuka');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1200);
+}
+
+// Clock
+setInterval(() => {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+}, 1000);
+
+// Tap center toggles UI (Kotatsu-style central tap zone behavior)
+document.getElementById('readerSurface').addEventListener('click', (e) => {
+  // If clicking on image center, toggle UI
+  if (e.target.classList.contains('page-img') || e.target.closest('.tap-zone')) {
+    // Handled by tap zones / buttons
+  }
+});
+
+// Scroll detection: update current page based on scroll position
+let scrollTimer;
+document.getElementById('readerSurface').addEventListener('scroll', () => {
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => {
+    const pages = document.querySelectorAll('.page-img');
+    for (let i = 0; i < pages.length; i++) {
+      const rect = pages[i].getBoundingClientRect();
+      if (rect.top >= -10 && rect.top <= 200) {
+        currentPage = i + 1;
+        updateUI();
+        break;
+      }
+    }
+  }, 150);
+}, {passive:true});
+
+// Keyboard navigation (Kotatsu: arrow keys, space, page down)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'Space') {
+    e.preventDefault(); nextPage();
+  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    e.preventDefault(); prevPage();
+  } else if (e.key === 'f') {
+    e.preventDefault(); toggleUI();
+  }
+});
+
+// Double tap: toggle zoom (Kotatsu gesture)
+let lastTap = 0;
+document.getElementById('readerSurface').addEventListener('click', (e) => {
+  const now = Date.now();
+  if (now - lastTap < 300 && (e.target.classList.contains('page-img') || e.target.closest('.tap-zone.center'))) {
+    // Double tap detected
+    if (zoomLevel > 1) zoomLevel = 1; else zoomLevel = 1.8;
+    document.querySelectorAll('.page-img').forEach(img => img.style.transform = 'scale(' + zoomLevel + ')');
+    document.getElementById('zoomIndicator').textContent = Math.round(zoomLevel * 100) + '%';
+  }
+  lastTap = now;
+});
+
+// Initialize
+updateUI();
+</script>
+</body>
+</html>
