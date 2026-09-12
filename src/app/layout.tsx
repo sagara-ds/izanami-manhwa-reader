@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, DM_Sans } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/AuthProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -29,8 +30,8 @@ export default function RootLayout({
       lang="id"
       className={`${inter.variable} ${dmSans.variable} dark h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#0d0d0d] text-[#f4f4f5] font-sans selection:bg-[#7c3aed]/30 selection:text-[#ddd6fe]">
-        {children}
+      <body className="min-h-full flex flex-col bg-[#09090b] text-white font-sans selection:bg-[#3b82f6]/30 selection:text-white">
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

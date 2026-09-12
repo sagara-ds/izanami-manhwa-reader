@@ -1,126 +1,114 @@
-import Link from "next/link";
-import { Announcement } from "@/components/Announcement";
 import { Nav } from "@/components/Nav";
-import { SectionRow } from "@/components/SectionRow";
+import { Hero } from "@/components/Hero";
+import { SectionHead } from "@/components/SectionHead";
+import { Rail } from "@/components/CardSlider";
+import { ListCard } from "@/components/ListCard";
+import { HomeUpdates } from "@/components/HomeUpdates";
 import { RecommendationTabs } from "@/components/RecommendationTabs";
-import { PopularTabs } from "@/components/PopularTabs";
+import { GenrePanel } from "@/components/GenrePanel";
+import { ButtonCorner } from "@/components/ButtonCorner";
 import { Footer } from "@/components/Footer";
-import { getBrowse } from "@/lib/shinigami";
+import { BoltIcon, CheckIcon, FireIcon, StarIcon, ThumbsUpIcon } from "@/components/icons";
 import {
-  MOCK_POPULAR_ALL,
-  MOCK_POPULAR_DAILY,
-  MOCK_POPULAR_WEEKLY,
-  MOCK_RECOMMENDATIONS,
-} from "@/lib/mock-data";
-import type { EnrichedComic } from "@/lib/types";
+  getCompleted,
+  getGenres,
+  getPopular,
+  getRecommended,
+  getTop,
+  getUpdates,
+} from "@/lib/shngm";
 
 export const revalidate = 120;
 
+function Panel({ title, href, Icon, iconClass = "text-[#3b82f6]", children }: { title: string; href: string; Icon?: React.ComponentType<{ className?: string }>; iconClass?: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-[#141417] rounded-2xl border border-zinc-800/60 overflow-hidden">
+      <div className="flex items-center justify-between px-3.5 py-3 border-b border-zinc-800/60 bg-white/[0.02]">
+        <div className="flex items-center gap-2">
+          {Icon && <Icon className={`w-3.5 h-3.5 ${iconClass}`} />}
+          <h3 className="font-bold text-xs text-white">{title}</h3>
+        </div>
+        <a href={href} className="text-[10px] font-semibold text-zinc-500 hover:text-[#3b82f6] transition-colors">
+          Semua →
+        </a>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default async function HomePage() {
-  const browse = await getBrowse();
+  const [recommended, popular, allTime, completed, updAll, updManhwa, updManga, updManhua, genres] =
+    await Promise.all([
+      getRecommended(undefined, 1, 60),
+      getPopular(1, 12),
+      getTop("all_time", 12),
+      getCompleted(1, 12),
+      getUpdates("project", 1, 18),
+      getUpdates("project", 1, 18, "manhwa"),
+      getUpdates("project", 1, 18, "manga"),
+      getUpdates("project", 1, 18, "manhua"),
+      getGenres(),
+    ]);
 
-  // Map API data if available, otherwise use mock recommendations
-  let recommendations: (EnrichedComic & { views?: string })[] =
-    MOCK_RECOMMENDATIONS;
-  let popularDaily: (EnrichedComic & { views?: string })[] = MOCK_POPULAR_DAILY;
-  const popularWeekly: (EnrichedComic & { views?: string })[] =
-    MOCK_POPULAR_WEEKLY;
-  const popularAll: (EnrichedComic & { views?: string })[] = MOCK_POPULAR_ALL;
-
-  if (browse && browse.hotList && browse.hotList.length > 0) {
-    // If live API returns hotList, weave it into recommendations
-    const liveItems = browse.hotList.map((c, i) => ({
-      ...c,
-      comicType: (i % 3 === 0
-        ? "manhwa"
-        : i % 3 === 1
-        ? "manga"
-        : "manhua") as "manhwa" | "manga" | "manhua",
-      views: `${((i * 37) % 20 / 10 + 1).toFixed(1)}M`,
-    }));
-    recommendations = liveItems;
-    if (browse.trendingList && browse.trendingList.length > 0) {
-      popularDaily = browse.trendingList.slice(0, 6).map((c, i) => ({
-        ...c,
-        views: `${((i * 53) % 30 / 10 + 0.5).toFixed(1)}M`,
-      }));
-    }
-  }
+  const byFormat = {
+    manhwa: recommended.items.filter((m) => m.taxonomy?.Format?.[0]?.slug === "manhwa").slice(0, 12),
+    manga: recommended.items.filter((m) => m.taxonomy?.Format?.[0]?.slug === "manga").slice(0, 12),
+    manhua: recommended.items.filter((m) => m.taxonomy?.Format?.[0]?.slug === "manhua").slice(0, 12),
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0d0d0d]">
-      {/* Announcement full-width top */}
-      <Announcement text="📢 Shinigami API terhubung — baca komik Indonesia langsung dari sumber terpercaya • Manhwa • Manga • Manhua" />
-
-      {/* Sticky top nav */}
+    <div className="min-h-screen flex flex-col bg-[#09090b] text-white">
       <Nav />
 
-      {/* Main content container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
-        {/* Quick hero highlight / banner promo */}
-        <section
-          aria-label="Sorotan Utama"
-          className="relative rounded-2xl overflow-hidden border border-[#27272a] bg-gradient-to-r from-[#1f1f1f] via-[#141414] to-[#0d0d0d] p-6 sm:p-8 mb-10 shadow-2xl"
-        >
-          <div className="max-w-2xl relative z-10">
-            <span className="inline-block text-[11px] font-extrabold uppercase tracking-widest text-[#06b6d4] bg-[#06b6d4]/10 border border-[#06b6d4]/30 px-2.5 py-1 rounded-full mb-3">
-              Koleksi Terbaru
-            </span>
-            <h1 className="font-display text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight mb-2">
-              Baca Manga, Manhwa &amp; Manhua Bahasa Indonesia
-            </h1>
-            <p className="text-xs sm:text-sm text-[#a1a1aa] leading-relaxed mb-4">
-              Dark mode AMOLED default, tampilan vertical-scroll seperti Kotatsu,
-              update cepat setiap hari langsung dari translator terpercaya.
-            </p>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/serie/solo-leveling"
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#7c3aed] to-[#06b6d4] text-white text-xs font-bold shadow-lg hover:opacity-95 transition-opacity"
-              >
-                Mulai Membaca
-              </Link>
-              <Link
-                href="/explore"
-                className="px-4 py-2 rounded-lg bg-[#1a1a1a] border border-[#27272a] text-[#f4f4f5] text-xs font-semibold hover:border-[#3f3f46] transition-colors"
-              >
-                Jelajahi Seri
-              </Link>
-            </div>
-          </div>
-          <div
-            className="absolute -right-16 -top-16 w-80 h-80 rounded-full bg-[#7c3aed]/10 blur-3xl pointer-events-none"
-            aria-hidden="true"
-          />
-          <div
-            className="absolute right-32 -bottom-16 w-64 h-64 rounded-full bg-[#06b6d4]/10 blur-3xl pointer-events-none"
-            aria-hidden="true"
-          />
+      <main className="max-w-screen-2xl mx-auto px-3 sm:px-4 pt-4 pb-10 w-full flex-1 flex flex-col gap-4">
+        <Hero items={popular.items} />
+
+        <section>
+          <SectionHead title="Rekomendasi" Icon={ThumbsUpIcon} iconClass="text-[#3b82f6]" />
+          <RecommendationTabs byFormat={byFormat} initial="manhwa" />
         </section>
 
-        {/* Section Rekomendasi with tabs: Manhwa • Manga • Manhua */}
-        <SectionRow
-          title="Rekomendasi"
-          actionHref="/explore?sort=rating"
-          actionText="Katalog Lengkap"
-        >
-          <RecommendationTabs items={recommendations} />
-        </SectionRow>
+        <div className="flex flex-col lg:flex-row gap-5 items-start">
+          <div className="flex-1 min-w-0 w-full">
+            <SectionHead title="Update Terbaru" href="/updates" Icon={BoltIcon} iconClass="text-[#3b82f6]" />
+            <HomeUpdates
+              byFormat={{
+                all: updAll.items,
+                manhwa: updManhwa.items,
+                manga: updManga.items,
+                manhua: updManhua.items,
+              }}
+            />
+          </div>
 
-        {/* Section Populer with tabs: Harian • Mingguan • Semua */}
-        <SectionRow
-          title="Populer"
-          actionHref="/explore?sort=views"
-          actionText="Peringkat"
-        >
-          <PopularTabs
-            daily={popularDaily}
-            weekly={popularWeekly}
-            all={popularAll}
-          />
-        </SectionRow>
+          <aside className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4">
+            <Panel title="Terpopuler" href="/popular" Icon={FireIcon} iconClass="text-orange-400">
+              {popular.items.slice(0, 10).map((m, i) => (
+                <ListCard key={m.manga_id} index={i} manga={m} />
+              ))}
+            </Panel>
+            <Panel title="Rating Tertinggi" href="/top" Icon={StarIcon} iconClass="text-yellow-400">
+              {allTime.slice(0, 8).map((m, i) => (
+                <ListCard key={m.manga_id} index={i} manga={m} />
+              ))}
+            </Panel>
+            <GenrePanel genres={genres} />
+          </aside>
+        </div>
+
+        <section>
+          <SectionHead title="Rating Tertinggi" href="/top" Icon={StarIcon} iconClass="text-yellow-400" />
+          <Rail items={allTime} rank />
+        </section>
+
+        <section>
+          <SectionHead title="Komik Tamat" href="/completed" Icon={CheckIcon} iconClass="text-emerald-400" />
+          <Rail items={completed.items} />
+        </section>
       </main>
 
+      <ButtonCorner />
       <Footer />
     </div>
   );

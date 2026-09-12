@@ -1,71 +1,70 @@
 import Link from "next/link";
-import type { EnrichedComic } from "@/lib/types";
-import { seriesHref } from "@/lib/shinigami";
+import type { MangaItem } from "@/lib/shngm-types";
+import { normalizeManga, formatCount, timeAgoShort, isRecent } from "@/lib/format";
+import { CountryBadge } from "./CountryBadge";
 
 export function ComicCard({
   comic,
   priority = false,
 }: {
-  comic: EnrichedComic & { views?: string };
+  comic: MangaItem;
   priority?: boolean;
 }) {
-  const badgeGenre = comic.comicType
-    ? comic.comicType.toUpperCase()
-    : comic.genres?.[0] ?? "MANGA";
-
-  const views = comic.views ?? "850K";
-  const rating = (comic.rating && comic.rating > 0 ? comic.rating : 4.8).toFixed(1);
+  const m = normalizeManga(comic);
+  const fresh = m.chapterTime && isRecent(m.chapterTime, 3);
 
   return (
-    <article className="group">
-      <Link
-        href={seriesHref(comic.url)}
-        className="manga-card block bg-[#1f1f1f] border border-[#27272a] rounded-xl overflow-hidden relative cursor-pointer"
-        aria-label={comic.title}
-      >
-        {/* Cover image container (aspect 3:4.2) */}
-        <div className="relative aspect-[3/4.2] w-full overflow-hidden bg-[#18181b]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={comic.cover}
-            alt={comic.title}
-            loading={priority ? "eager" : "lazy"}
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover filter contrast-[1.03] saturate-[0.95] group-hover:scale-105 transition-transform duration-300"
-          />
+    <Link
+      href={`/serie/${m.id}`}
+      aria-label={m.title}
+      className="manga-card group flex flex-col rounded-xl overflow-hidden bg-[#141417] border border-zinc-800/60 hover:border-[#3b82f6]/50 hover:shadow-lg hover:shadow-[#3b82f6]/10 transition-all duration-300"
+    >
+      <div className="relative aspect-[2/3] overflow-hidden bg-zinc-900">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={m.cover}
+          alt={m.title}
+          loading={priority ? "eager" : "lazy"}
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/40" />
 
-          {/* Rating overlay badge top-right */}
-          <div className="absolute top-1.5 right-1.5 bg-black/75 backdrop-blur-sm border border-white/10 text-[10px] font-bold text-amber-400 px-1.5 py-0.5 rounded flex items-center gap-1 shadow">
-            <span aria-hidden="true">★</span>
-            <span>{rating}</span>
-          </div>
-
-          {/* Type / Genre badge top-left */}
-          <div className="absolute top-1.5 left-1.5 bg-[#7c3aed]/85 backdrop-blur-sm text-[9px] font-extrabold uppercase tracking-wider text-white px-1.5 py-0.5 rounded shadow">
-            {badgeGenre}
-          </div>
+        <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
+          {m.chapterTime && (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-[9px] font-bold text-zinc-200 leading-none">
+              <span aria-hidden="true" className="text-[#3b82f6]">◷</span>
+              {timeAgoShort(m.chapterTime)}
+            </span>
+          )}
+          {fresh && (
+            <span className="px-1.5 py-0.5 rounded-md bg-red-600 text-white text-[9px] font-black leading-none tracking-wide">
+              UP
+            </span>
+          )}
         </div>
 
-        {/* Info footer */}
-        <div className="p-2 sm:p-2.5">
-          <h3
-            title={comic.title}
-            className="font-display font-bold text-xs text-[#f4f4f5] leading-tight line-clamp-1 group-hover:text-white"
-          >
-            {comic.title}
-          </h3>
+        <CountryBadge code={m.country} className="absolute top-1.5 right-1.5" />
+      </div>
 
-          <div className="mt-1 flex items-center justify-between text-[10px] text-[#71717a]">
-            <span className="truncate max-w-[65%] text-[#a1a1aa]">
-              {comic.latestChapter || "Ch. Terkini"}
-            </span>
-            <span className="font-medium flex items-center gap-0.5">
+      <div className="p-2 flex flex-col gap-1.5 items-center text-center">
+        <p className="text-white text-xs sm:text-sm font-medium line-clamp-2 leading-snug group-hover:text-[#3b82f6] transition-colors">
+          {m.title}
+        </p>
+        <div className="flex items-center justify-center gap-1.5 flex-wrap">
+          {m.views > 0 && (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-semibold text-zinc-300">
               <span aria-hidden="true">👁</span>
-              {views}
+              {formatCount(m.views)}
             </span>
-          </div>
+          )}
+          {m.chapterNumber != null && (
+            <span className="px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-black text-zinc-200">
+              CH.{m.chapterNumber}
+            </span>
+          )}
         </div>
-      </Link>
-    </article>
+      </div>
+    </Link>
   );
 }

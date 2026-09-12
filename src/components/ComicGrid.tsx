@@ -1,11 +1,11 @@
-import type { EnrichedComic } from "@/lib/types";
+import type { MangaItem } from "@/lib/shngm-types";
 import { ComicCard } from "./ComicCard";
 
 export function ComicGrid({
   comics,
   priorityCount = 6,
 }: {
-  comics: (EnrichedComic & { views?: string })[];
+  comics: MangaItem[];
   priorityCount?: number;
 }) {
   if (!comics.length) {
@@ -19,10 +19,10 @@ export function ComicGrid({
   return (
     <div
       role="list"
-      className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4"
+      className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-2.5"
     >
       {comics.map((c, i) => (
-        <ComicCard key={c.url || i} comic={c} priority={i < priorityCount} />
+        <ComicCard key={c.manga_id || i} comic={c} priority={i < priorityCount} />
       ))}
     </div>
   );
