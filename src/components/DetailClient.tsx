@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect -- sync localStorage once on mount */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { formatCount, timeAgo, isRecent } from "@/lib/format";
 import { CheckIcon, PlayIcon } from "./icons";
@@ -115,37 +115,51 @@ export function HistoryRecorder({
 
 export function ChapterBrowser({
   mangaId,
-  chapters,
+  initialChapters,
+  totalChapters,
 }: {
   mangaId: string;
-  chapters: ChapterEntry[];
+  initialChapters: ChapterEntry[];
+  totalChapters: number;
 }) {
   const [query, setQuery] = useState("");
   const [reversed, setReversed] = useState(false);
-  const [page, setPage] = useState(1);
   const [readMap, setReadMap] = useState<Record<string, number>>({});
-  const PAGE_SIZE = 24;
+  const [allChapters, setAllChapters] = useState<ChapterEntry[]>(initialChapters);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     setReadMap(getReadMap());
   }, []);
 
-  const filtered = chapters.filter((c) =>
+  const loadMore = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/chapters/${mangaId}?offset=${allChapters.length}&limit=100`);
+      if (res.ok) {
+        const data = await res.json();
+        setAllChapters((prev) => [...prev, ...data.chapters]);
+        if (data.done || allChapters.length + data.chapters.length >= totalChapters) {
+          setExpanded(true);
+        }
+      }
+    } catch {}
+    setLoading(false);
+  }, [allChapters.length, mangaId, totalChapters]);
+
+  const filtered = allChapters.filter((c) =>
     query ? String(c.chapter_number).includes(query.trim()) : true
   );
   const ordered = reversed ? [...filtered].reverse() : filtered;
-  const totalPages = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const slice = ordered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const freshIds = useMemo(
-    () => new Set(slice.filter((c) => isRecent(c.created_at, 7)).map((c) => c.chapter_id)),
-    [slice]
-  );
 
   function openChapter(chapterId: string) {
     markChapterRead(chapterId, mangaId);
     setReadMap((p) => ({ ...p, [chapterId]: Date.now() }));
   }
+
+  const hasMore = expanded && allChapters.length < totalChapters;
+  const showLoadMore = !expanded || hasMore;
 
   return (
     <div className="bg-[#18181b] rounded-2xl border border-zinc-800/50 overflow-hidden">
@@ -154,7 +168,7 @@ export function ChapterBrowser({
           <span aria-hidden="true" className="text-[#3b82f6] text-sm">▤</span>
           <h3 className="font-bold text-sm sm:text-base text-white">Daftar Chapter</h3>
           <span className="px-2 py-0.5 bg-[#3b82f6]/15 text-[#3b82f6] text-xs font-bold rounded-lg border border-[#3b82f6]/20">
-            {filtered.length}
+            {totalChapters}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -162,17 +176,11 @@ export function ChapterBrowser({
             type="text"
             placeholder="Cari…"
             value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setQuery(e.target.value)}
             className="px-3 py-1.5 bg-zinc-800/60 border border-zinc-700/40 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#3b82f6]/50 w-24 sm:w-32"
           />
           <button
-            onClick={() => {
-              setReversed(!reversed);
-              setPage(1);
-            }}
+            onClick={() => setReversed(!reversed)}
             className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
               reversed
                 ? "bg-[#3b82f6]/15 text-[#3b82f6] border-[#3b82f6]/30"
@@ -184,12 +192,11 @@ export function ChapterBrowser({
         </div>
       </div>
 
-      {slice.length === 0 ? (
+      {filtered.length === 0 ? (
         <p className="py-16 text-center text-sm text-zinc-600">Chapter tidak ditemukan</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 p-3.5">
-          {slice.map((ch) => {
-            const fresh = freshIds.has(ch.chapter_id);
+          {ordered.slice(0, 100).map((ch) => {
             const read = !!readMap[ch.chapter_id];
             return (
               <Link
@@ -224,7 +231,7 @@ export function ChapterBrowser({
                     <span className={`text-sm font-bold leading-none transition-colors ${read ? "text-zinc-500" : "text-white group-hover:text-[#3b82f6]"}`}>
                       Ch.{ch.chapter_number}
                     </span>
-                    {fresh && !read && (
+                    {isRecent(ch.created_at, 7) && !read && (
                       <span className="px-1.5 py-0.5 bg-[#3b82f6] text-white text-[9px] font-black rounded tracking-wide leading-none">
                         BARU
                       </span>
@@ -246,36 +253,14 @@ export function ChapterBrowser({
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-1.5 px-4 pb-5 flex-wrap">
+      {showLoadMore && !query && (
+        <div className="flex justify-center pb-5">
           <button
-            onClick={() => setPage(Math.max(1, safePage - 1))}
-            disabled={safePage <= 1}
-            className="w-9 h-9 rounded-xl bg-[#18181b] border border-zinc-700/50 text-zinc-300 text-sm disabled:opacity-30 hover:bg-[#3b82f6] hover:border-[#3b82f6] hover:text-white transition-all cursor-pointer disabled:cursor-default"
+            onClick={loadMore}
+            disabled={loading}
+            className="px-6 py-2.5 rounded-xl text-sm font-semibold border border-zinc-700/50 bg-[#18181b] text-zinc-300 hover:bg-[#3b82f6] hover:border-[#3b82f6] hover:text-white transition-all cursor-pointer disabled:opacity-50 disabled:cursor-default"
           >
-            ←
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
-            .map((p) => (
-              <button
-                key={p}
-                onClick={() => setPage(p)}
-                className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all cursor-pointer border ${
-                  p === safePage
-                    ? "bg-[#3b82f6] border-[#3b82f6] text-white shadow-md shadow-[#3b82f6]/20"
-                    : "bg-[#18181b] border-zinc-700/50 text-zinc-300 hover:bg-zinc-700/60 hover:text-white"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-          <button
-            onClick={() => setPage(Math.min(totalPages, safePage + 1))}
-            disabled={safePage >= totalPages}
-            className="w-9 h-9 rounded-xl bg-[#18181b] border border-zinc-700/50 text-zinc-300 text-sm disabled:opacity-30 hover:bg-[#3b82f6] hover:border-[#3b82f6] hover:text-white transition-all cursor-pointer disabled:cursor-default"
-          >
-            →
+            {loading ? "Memuat…" : hasMore ? "Muat Lebih Banyak" : "Lihat Semua Chapter"}
           </button>
         </div>
       )}

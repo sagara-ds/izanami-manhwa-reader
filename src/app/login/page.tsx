@@ -1,12 +1,12 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { ButtonCorner } from "@/components/ButtonCorner";
 import { isAuthConfigured, useAuth } from "@/components/AuthProvider";
-import { Turnstile, isTurnstileConfigured } from "@/components/Turnstile";
+import { Turnstile, isTurnstileConfigured, type TurnstileHandle } from "@/components/Turnstile";
 
 export default function LoginPage() {
   return (
@@ -33,6 +33,7 @@ function LoginBox() {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   async function send() {
     if (!isAuthConfigured()) {
@@ -66,6 +67,9 @@ function LoginBox() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal kirim link");
     } finally {
+      // Token single-use: selalu reset agar token berikutnya fresh.
+      turnstileRef.current?.reset();
+      setCaptcha(null);
       setBusy(false);
     }
   }
@@ -97,7 +101,7 @@ function LoginBox() {
             }}
             className="w-full px-4 py-3 bg-white/5 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#3b82f6]/50 border border-transparent"
           />
-          <Turnstile onVerify={setCaptcha} />
+          <Turnstile ref={turnstileRef} onVerify={setCaptcha} />
           <button
             onClick={() => void send()}
             disabled={busy || cooldown > 0}

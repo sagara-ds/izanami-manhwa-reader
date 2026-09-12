@@ -42,8 +42,8 @@ export default async function ReadPage({
   }));
   const chapters =
     embedded.length > 0
-      ? embedded
-      : (await getChapterList(ch.manga_id, 200)).map((c) => ({
+      ? embedded.slice(0, 100)
+      : (await getChapterList(ch.manga_id, 100)).map((c) => ({
           chapter_id: c.chapter_id,
           chapter_number: c.chapter_number,
         }));

@@ -34,7 +34,10 @@ export default async function SeriePage({
 
   const detail = await getMangaDetail(id);
   if (!detail) notFound();
-  const chapters = await getChapterList(id, 200);
+  const chapters = await getChapterList(id, 50);
+
+  // Sort newest first
+  const sortedChapters = [...chapters].sort((a, b) => b.chapter_number - a.chapter_number);
 
   const genres = safeGenres(detail.taxonomy?.Genre ?? []);
   const type = detail.taxonomy?.Type?.[0]?.name;
@@ -165,7 +168,7 @@ export default async function SeriePage({
               )}
 
               <div className="flex flex-wrap justify-center sm:justify-start gap-2 pt-0.5">
-                <ReadButtons mangaId={id} chapters={chapters} />
+                <ReadButtons mangaId={id} chapters={sortedChapters} />
                 <BookmarkButton mangaId={id} />
               </div>
             </div>
@@ -175,7 +178,7 @@ export default async function SeriePage({
 
       <div className="max-w-screen-xl mx-auto px-4 pb-10 w-full flex-1 mt-5">
         {synopsis && <Synopsis text={synopsis} />}
-        <ChapterBrowser mangaId={id} chapters={chapters} />
+        <ChapterBrowser mangaId={id} initialChapters={sortedChapters} totalChapters={chapters.length} />
       </div>
 
       <Footer />

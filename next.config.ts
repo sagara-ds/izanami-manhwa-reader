@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "no-referrer" },
         ],
       },
+      {
+        source: "/api/chapters/:id*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=300, stale-while-revalidate=600" },
+        ],
+      },
     ];
   },
 };

@@ -2,10 +2,10 @@
 
 /* eslint-disable react-hooks/set-state-in-effect -- reset modal form state each time it opens */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAuthConfigured, useAuth } from "./AuthProvider";
-import { Turnstile, isTurnstileConfigured } from "./Turnstile";
+import { Turnstile, isTurnstileConfigured, type TurnstileHandle } from "./Turnstile";
 
 export function LoginModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
@@ -16,6 +16,7 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -67,6 +68,9 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal kirim link");
     } finally {
+      // Token single-use: selalu reset agar token berikutnya fresh.
+      turnstileRef.current?.reset();
+      setCaptcha(null);
       setBusy(false);
     }
   }
@@ -117,7 +121,7 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
               }}
               className="w-full px-4 py-3 bg-white/5 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#3b82f6]/50 border border-transparent"
             />
-            <Turnstile onVerify={setCaptcha} />
+            <Turnstile ref={turnstileRef} onVerify={setCaptcha} />
             <button
               onClick={() => void send()}
               disabled={busy || cooldown > 0}

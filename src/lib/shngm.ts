@@ -172,26 +172,28 @@ export function chapterImageUrls(ch: ChapterDetail): string[] {
 
 export async function getChapterList(
   mangaId: string,
-  limit = 30,
+  limit = 0, // 0 = return all chapters
 ): Promise<ChapterEntry[]> {
   const detail = await getMangaDetail(mangaId);
-  if (detail?.chapters?.length) return detail.chapters;
-  if (!detail?.latest_chapter_id) return [];
-  const out: ChapterEntry[] = [];
-  let cursor: string | null = detail.latest_chapter_id;
-  let guard = 0;
-  while (cursor && guard < limit) {
-    guard += 1;
-    const ch = await getChapterDetail(cursor);
-    if (!ch) break;
-    out.push({
-      chapter_id: ch.chapter_id,
-      chapter_number: ch.chapter_number,
-      created_at: ch.release_date,
-    });
-    cursor = ch.prev_chapter_id;
+  if (detail?.chapters?.length) {
+    if (limit > 0) return detail.chapters.slice(0, limit);
+    return detail.chapters;
   }
-  return out;
+  return [];
+}
+
+export async function getChapterListPaginated(
+  mangaId: string,
+  page = 1,
+  pageSize = 24,
+): Promise<{ chapters: ChapterEntry[]; total: number; totalPages: number }> {
+  const all = await getChapterList(mangaId);
+  const total = all.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = (safePage - 1) * pageSize;
+  const slice = all.slice(start, start + pageSize);
+  return { chapters: slice, total, totalPages };
 }
 
 export async function getSlider(): Promise<SliderItem[]> {
