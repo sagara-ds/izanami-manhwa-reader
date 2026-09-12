@@ -1,10 +1,14 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { ButtonCorner } from "@/components/ButtonCorner";
 import { ComicGrid } from "@/components/ComicGrid";
-import { getFilter, type FilterKind } from "@/lib/shinigami";
-import { MOCK_POPULAR_ALL, MOCK_POPULAR_WEEKLY } from "@/lib/mock-data";
-import type { EnrichedComic } from "@/lib/types";
+import { ExploreFilters } from "@/components/ExploreFilters";
+import { ExploreListCard } from "@/components/ExploreListCard";
+import { ExploreToolbar } from "@/components/ExploreToolbar";
+import { getExplore, getGenres } from "@/lib/shngm";
+import { safeGenreItems } from "@/lib/format";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -12,102 +16,190 @@ export const metadata: Metadata = {
   description: "Jelajahi katalog komik trending, rating tertinggi, dan update terbaru di Izanami.",
 };
 
-export const revalidate = 180;
+export const revalidate = 120;
 
-const SORTS: { id: FilterKind; label: string }[] = [
-  { id: "trending", label: "Trending" },
-  { id: "rating", label: "Rating" },
-  { id: "views", label: "Terbanyak Dilihat" },
-  { id: "latest", label: "Update Terbaru" },
-  { id: "new", label: "Baru Rilis" },
-  { id: "az", label: "A-Z" },
-];
+type SP = {
+  q?: string | string[];
+  genre?: string | string[];
+  xgenre?: string | string[];
+  inc?: string | string[];
+  exc?: string | string[];
+  format?: string | string[];
+  type?: string | string[];
+  status?: string | string[];
+  author?: string | string[];
+  sort?: string | string[];
+  order?: string | string[];
+  page?: string | string[];
+};
 
-const VALID_SORTS = new Set(SORTS.map((s) => s.id));
+function first(v?: string | string[]): string {
+  return Array.isArray(v) ? (v[0] ?? "") : (v ?? "");
+}
+
+function allGenres(v?: string | string[]): string[] {
+  const raw = Array.isArray(v) ? v : v ? [v] : [];
+  return raw
+    .flatMap((g) => g.split(","))
+    .map((g) => g.trim())
+    .filter(Boolean)
+    .filter((g, i, a) => a.indexOf(g) === i);
+}
+
+function pageHref(args: { q: string; genres: string[]; excludeGenres: string[]; includeMode: string; excludeMode: string; format: string; type: string; status: string; author: string; sort: string; order: string; page: number }): string {
+  const qs = new URLSearchParams();
+  if (args.q) qs.set("q", args.q);
+  for (const g of args.genres) qs.append("genre", g);
+  for (const g of args.excludeGenres) qs.append("xgenre", g);
+  if (args.includeMode && args.includeMode !== "or") qs.set("inc", args.includeMode);
+  if (args.excludeMode && args.excludeMode !== "or") qs.set("exc", args.excludeMode);
+  if (args.format && args.format !== "all") qs.set("format", args.format);
+  if (args.type) qs.set("type", args.type);
+  if (args.status) qs.set("status", args.status);
+  if (args.author) qs.set("author", args.author);
+  if (args.sort && args.sort !== "latest") qs.set("sort", args.sort);
+  if (args.order && args.order !== "desc") qs.set("order", args.order);
+  if (args.page > 1) qs.set("page", String(args.page));
+  const s = qs.toString();
+  return s ? `/explore?${s}` : "/explore";
+}
 
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; page?: string }>;
+  searchParams: Promise<SP>;
 }) {
   const sp = await searchParams;
-  const sort: FilterKind = VALID_SORTS.has(sp.sort as FilterKind)
-    ? (sp.sort as FilterKind)
-    : "trending";
-  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const q = first(sp.q).trim();
+  const genres = allGenres(sp.genre);
+  const excludeGenres = allGenres(sp.xgenre);
+  const includeMode = first(sp.inc) === "and" ? "and" : "or";
+  const excludeMode = first(sp.exc) === "and" ? "and" : "or";
+  const format = first(sp.format);
+  const type = first(sp.type);
+  const status = first(sp.status);
+  const author = first(sp.author).trim();
+  const sortRaw = first(sp.sort);
+  const sort: "latest" | "popularity" | "rating" | "az" = ["latest", "popularity", "rating", "az"].includes(sortRaw) ? (sortRaw as "latest" | "popularity" | "rating" | "az") : "latest";
+  const order: "asc" | "desc" = first(sp.order) === "asc" ? "asc" : "desc";
+  const page = Math.max(1, parseInt(first(sp.page) || "1", 10) || 1);
 
-  const live = await getFilter(sort, page);
+  const [res, all] = await Promise.all([
+    getExplore({
+      page,
+      pageSize: 24,
+      genres,
+      status,
+      format,
+      type,
+      author,
+      sort: sort === "az" ? "latest" : sort,
+      sortOrder: sort === "az" ? "desc" : order,
+      keyword: q,
+      includeMode,
+      excludeMode,
+      excludeGenres,
+    }),
+    getGenres(),
+  ]);
 
-  let comics: (EnrichedComic & { views?: string })[] =
-    page === 1 ? MOCK_POPULAR_ALL : MOCK_POPULAR_WEEKLY;
-  if (live && live.length > 0) {
-    comics = live.map((c) => ({ ...c, views: "1.2M" }));
-  }
+  const items = sort === "az"
+    ? [...res.items].sort((a, b) =>
+        order === "asc"
+          ? a.title.localeCompare(b.title, "id")
+          : b.title.localeCompare(a.title, "id")
+      )
+    : res.items;
 
-  const prevHref = page > 1 ? `/explore?sort=${sort}&page=${page - 1}` : null;
-  const nextHref = `/explore?sort=${sort}&page=${page + 1}`;
+  const safe = safeGenreItems(all);
+  const count = res.meta?.total_record ?? res.items.length;
+  const totalPage = res.meta?.total_page;
+  const hasFilters = q || genres.length > 0 || excludeGenres.length > 0 || format || type || status || author;
+
+  const base = { q, genres, excludeGenres, includeMode, excludeMode, format, type, status, author, sort, order };
+  const prevHref = page > 1 ? pageHref({ ...base, page: page - 1 }) : null;
+  const nextHref =
+    totalPage === undefined || page < totalPage
+      ? pageHref({ ...base, page: page + 1 })
+      : null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0d0d0d]">
+    <div className="min-h-screen flex flex-col bg-[#09090b] text-white">
       <Nav />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="font-display text-2xl font-extrabold text-white tracking-tight mb-2 flex items-center gap-2.5">
-          <span className="w-1 h-6 rounded-full bg-gradient-to-b from-[#7c3aed] to-[#06b6d4]" aria-hidden="true" />
-          Jelajahi Katalog
-        </h1>
-        <p className="text-xs text-[#71717a] mb-6">
-          Filter katalog dari API Shinigami — trending, rating, dan update terbaru.
-        </p>
+      <main className="max-w-screen-xl mx-auto px-4 pt-0 pb-5 w-full flex-1">
+        <Suspense>
+          <ExploreFilters genres={safe}>
+            <div className="sticky top-[117px] lg:top-[60px] z-20 bg-[#09090b]/95 backdrop-blur-md -mx-1 px-1 py-2">
+              <Suspense>
+                <ExploreToolbar />
+              </Suspense>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-zinc-500">
+                {count > 0 ? `${count.toLocaleString("id-ID")} judul` : "Jelajahi"}
+              </span>
+            </div>
 
-        {/* Sort filter pills */}
-        <nav aria-label="Urutkan" className="flex flex-wrap gap-2 mb-6">
-          {SORTS.map((s) => {
-            const active = sort === s.id;
-            return (
-              <Link
-                key={s.id}
-                href={`/explore?sort=${s.id}`}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  active
-                    ? "bg-[#7c3aed]/20 text-[#ddd6fe] border border-[#7c3aed]/50 shadow-[0_0_12px_rgba(124,58,237,0.25)]"
-                    : "bg-[#1a1a1a] text-[#a1a1aa] border border-[#27272a] hover:text-white hover:border-[#3f3f46]"
-                }`}
-              >
-                {s.label}
-              </Link>
-            );
-          })}
-        </nav>
+            {items.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3 text-zinc-600">
+                <p className="text-sm text-zinc-500">Tidak ada hasil ditemukan</p>
+                {hasFilters && (
+                  <Link href="/explore" className="text-xs text-[#3b82f6] hover:underline font-semibold">
+                    Reset semua filter
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <>
+                <div id="explore-grid">
+                  <ComicGrid comics={items} />
+                </div>
+                <div id="explore-list" className="hidden flex-col gap-4">
+                  {items.map((m) => (
+                    <ExploreListCard key={m.manga_id} comic={m} />
+                  ))}
+                </div>
+              </>
+            )}
 
-        <ComicGrid comics={comics} />
-
-        {/* Pagination */}
-        <nav aria-label="Halaman" className="mt-8 flex items-center justify-center gap-3">
-          {prevHref ? (
-            <Link
-              href={prevHref}
-              className="px-4 py-2 rounded-lg bg-[#1a1a1a] border border-[#27272a] text-xs font-semibold text-[#f4f4f5] hover:border-[#3f3f46]"
-            >
-              ← Sebelumnya
-            </Link>
-          ) : (
-            <span className="px-4 py-2 rounded-lg bg-[#141414] border border-[#1f1f1f] text-xs text-[#52525b] cursor-not-allowed">
-              ← Sebelumnya
-            </span>
+          {items.length > 0 && (
+            <div className="flex justify-center items-center gap-1.5 flex-wrap">
+              {prevHref ? (
+                <Link
+                  href={prevHref}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#18181b] border border-zinc-700/50 text-zinc-300 text-sm hover:bg-[#3b82f6] hover:border-[#3b82f6] hover:text-white transition-all"
+                >
+                  ←
+                </Link>
+              ) : (
+                <span className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#18181b] border border-zinc-700/50 text-sm opacity-30">
+                  ←
+                </span>
+              )}
+              <span className="text-xs text-zinc-500 tabular-nums px-2">
+                {page}
+                {totalPage ? ` / ${totalPage}` : ""}
+              </span>
+              {nextHref ? (
+                <Link
+                  href={nextHref}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#18181b] border border-zinc-700/50 text-zinc-300 text-sm hover:bg-[#3b82f6] hover:border-[#3b82f6] hover:text-white transition-all"
+                >
+                  →
+                </Link>
+              ) : (
+                <span className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#18181b] border border-zinc-700/50 text-sm opacity-30">
+                  →
+                </span>
+              )}
+            </div>
           )}
-          <span className="text-xs text-[#71717a] tabular-nums">
-            Halaman {page}
-          </span>
-          <Link
-            href={nextHref}
-            className="px-4 py-2 rounded-lg bg-[#1a1a1a] border border-[#27272a] text-xs font-semibold text-[#f4f4f5] hover:border-[#3f3f46]"
-          >
-            Berikutnya →
-          </Link>
-        </nav>
+          </ExploreFilters>
+        </Suspense>
       </main>
 
+      <ButtonCorner />
       <Footer />
     </div>
   );
