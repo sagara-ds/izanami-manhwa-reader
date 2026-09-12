@@ -7,7 +7,7 @@ Visual: MangaDex + Bato.to + Komiku. Reader: Kotatsu-style.
 
 - **Frontend:** Next.js 16 (App Router) + Tailwind CSS v4, Inter + DM Sans
 - **Data API:** Shinigami (`https://api.shinigami.ae/`, reverse-engineered dari app Android resmi) + mock fallback
-- **Backend:** `server/` Express + PostgreSQL (favorites, history)
+- **Backend:** Supabase Postgres + RLS (favorites, history), Auth magic link
 
 ## Jalankan
 
@@ -16,42 +16,33 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-Env opsional (`.env.local`):
+Env (`.env.local`):
 
 ```
-SHINIGAMI_API_BASE=https://api.shinigami.ae/
-SHINIGAMI_SITE_BASE=https://shinigamiscans.com
+NEXT_PUBLIC_SUPABASE_URL=https://xyzcompany.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=your-turnstile-site-key
 ```
 
-Backend + DB:
-
-```bash
-cp server/.env.example server/.env
-docker compose up -d db   # postgres:16 di :5432, schema auto-apply
-cd server && npm install && npm run dev   # api di :4000
-```
+Skema cloud: `supabase/migrations/` (users, favorites, history + RLS).
 
 ## Routes
 
 | Route | Sumber data |
 |---|---|
-| `/` landing (Rekomendasi tabs Manhwa/Manga/Manhua, Populer Harian/Mingguan/Semua) | `api/v1/browse` + mock |
-| `/serie/[slug]` detail + chapter list + related | `api/v1/comic/full?url=` + mock |
-| `/read/[slug]/[chapterId]` reader vertical scroll | `api/v1/chapter?url=` + mock |
-| `/explore?sort=trending\|rating\|views\|latest\|new\|az&page=` | `api/v1/filter/{kind}` + mock |
-| `/search?q=` | `api/v1/search` + mock |
-| `/library` favorit + lanjutkan baca (mock, sinkron API segera) | `server/` |
+| `/` landing (Hero, Rekomendasi, Update Terbaru, sidebar) | Shinigami |
+| `/serie/[id]` detail + chapter list + bookmark | Shinigami |
+| `/read/[chapterId]` reader vertical scroll + cari chapter | Shinigami |
+| `/explore` filter genre (include/exclude, or/and), format, type, status, author | Shinigami |
+| `/search?q=` + saran instan | Shinigami |
+| `/popular`, `/top`, `/completed`, `/updates`, `/recommended`, `/genres` | Shinigami |
+| `/library`, `/bookmark`, `/history`, `/info` | lokal + sinkron Supabase |
+| `/login` magic link email + Turnstile | Supabase Auth |
 
-## API map (dari `wiryaimd/shinigami-android`)
+## Data pribadi (Supabase, RLS per user)
 
-- `GET api/v1/browse` → `{hotList, newsList, trendingList}`
-- `GET api/v1/comic/full?url=` → `{comicModel, comicDetailModel}`
-- `GET api/v1/chapter?url=` → `{imageList}`
-- `GET api/v1/filter/{latest,trending,rating,views,new,az}?page=&multiple=`
-- `GET api/v1/search?keyword=&page=`
-
-`ComicModel`: `{title, url, cover, latestChapter, latestChapterUrl, rating}`.
-`url` = path seri situs → slug route app.
+- `users`, `favorites`, `history` — lihat `supabase/migrations/`
+- Auth: magic link email, captcha Turnstile di form kirim link
 
 ## Desain
 
