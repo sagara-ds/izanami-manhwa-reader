@@ -172,14 +172,30 @@ export function chapterImageUrls(ch: ChapterDetail): string[] {
 
 export async function getChapterList(
   mangaId: string,
-  limit = 0, // 0 = return all chapters
+  limit = 0,
 ): Promise<ChapterEntry[]> {
   const detail = await getMangaDetail(mangaId);
   if (detail?.chapters?.length) {
     if (limit > 0) return detail.chapters.slice(0, limit);
     return detail.chapters;
   }
-  return [];
+  if (!detail?.latest_chapter_id) return [];
+  const out: ChapterEntry[] = [];
+  let cursor: string | null = detail.latest_chapter_id;
+  let guard = 0;
+  const maxIter = limit > 0 ? limit : 500;
+  while (cursor && guard < maxIter) {
+    guard += 1;
+    const ch = await getChapterDetail(cursor);
+    if (!ch) break;
+    out.push({
+      chapter_id: ch.chapter_id,
+      chapter_number: ch.chapter_number,
+      created_at: ch.release_date,
+    });
+    cursor = ch.prev_chapter_id;
+  }
+  return out;
 }
 
 export async function getChapterListPaginated(
