@@ -1,12 +1,12 @@
 # Izanami — Platform Baca Manga / Manhwa / Manhua Indonesia
 
 Content-heavy manga reader, dark-mode default, high density, vertical scroll.
-Visual: MangaDex + Bato.to + Komiku. Reader: Kotatsu-style.
+Visual: MangaDex + Bato.to + Komiku + Kurokami. Reader: Kotatsu-style.
 
 ## Stack
 
 - **Frontend:** Next.js 16 (App Router) + Tailwind CSS v4, Inter + DM Sans
-- **Data API:** Shinigami (`https://api.shinigami.ae/`, reverse-engineered dari app Android resmi) + mock fallback
+- **Data API:** Shinigami (reverse-engineered dari app Android resmi) + mock fallback
 - **Backend:** Supabase Postgres + RLS (favorites, history), Auth magic link
 
 ## Jalankan
@@ -26,18 +26,6 @@ NEXT_PUBLIC_TURNSTILE_SITE_KEY=your-turnstile-site-key
 
 Skema cloud: `supabase/migrations/` (users, favorites, history + RLS).
 
-## Routes
-
-| Route | Sumber data |
-|---|---|
-| `/` landing (Hero, Rekomendasi, Update Terbaru, sidebar) | Shinigami |
-| `/serie/[id]` detail + chapter list + bookmark | Shinigami |
-| `/read/[chapterId]` reader vertical scroll + cari chapter | Shinigami |
-| `/explore` filter genre (include/exclude, or/and), format, type, status, author | Shinigami |
-| `/search?q=` + saran instan | Shinigami |
-| `/popular`, `/top`, `/completed`, `/updates`, `/recommended`, `/genres` | Shinigami |
-| `/library`, `/bookmark`, `/history`, `/info` | lokal + sinkron Supabase |
-| `/login` magic link email + Turnstile | Supabase Auth |
 
 ## Data pribadi (Supabase, RLS per user)
 
