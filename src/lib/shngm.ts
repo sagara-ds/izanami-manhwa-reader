@@ -184,20 +184,20 @@ export async function getHomePopular(pageSize = 12): Promise<HomeManga[]> {
 }
 
 export async function getHomeTop(pageSize = 12): Promise<HomeManga[]> {
-  // Fetch more items to allow client-side sorting by view_count as proxy for popularity
-  // The API's /manga/top endpoint sorts by views, not rating
-  // So we fetch more items and sort client-side by view_count descending
+  // Fetch from the explore endpoint with sort=rating to get properly sorted by rating
+  // The /manga/top endpoint sorts by views, not rating
   const qs = new URLSearchParams({
-    filter: "all_time",
     page: "1",
     page_size: String(Math.max(pageSize, 50)),
+    sort: "rating",
+    sort_order: "desc",
   });
-  const res = await apiGet<MangaItem[]>(`manga/top?${qs}`, 600);
+  const res = await apiGet<MangaItem[]>(`manga/list?${qs}`, 600);
   const items = (res?.data ?? []).map(toHomeManga);
-  // Client-side sort by view_count descending (highest views first)
-  // Items without views go to the end
+  // Client-side sort by user_rate descending as safety net
+  // Items without rating (null) go to the end
   return items
-    .sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
+    .sort((a, b) => (b.user_rate ?? 0) - (a.user_rate ?? 0))
     .slice(0, pageSize);
 }
 
