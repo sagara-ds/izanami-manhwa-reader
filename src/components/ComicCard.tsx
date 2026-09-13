@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import type { MangaItem } from "@/lib/shngm-types";
+import type { AnyManga } from "@/lib/shngm-types";
 import { normalizeManga, formatCount, timeAgoShort, isRecent } from "@/lib/format";
 import { CountryBadge } from "./CountryBadge";
 
@@ -7,7 +9,7 @@ export function ComicCard({
   comic,
   priority = false,
 }: {
-  comic: MangaItem;
+  comic: AnyManga;
   priority?: boolean;
 }) {
   const m = normalizeManga(comic);

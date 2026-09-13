@@ -1,11 +1,13 @@
-import type { MangaItem } from "@/lib/shngm-types";
+"use client";
+
+import type { AnyManga } from "@/lib/shngm-types";
 import { ComicCard } from "./ComicCard";
 
 export function ComicGrid({
   comics,
   priorityCount = 6,
 }: {
-  comics: MangaItem[];
+  comics: AnyManga[];
   priorityCount?: number;
 }) {
   if (!comics.length) {

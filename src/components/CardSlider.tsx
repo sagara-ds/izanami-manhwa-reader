@@ -1,9 +1,11 @@
+"use client";
+
 import Link from "next/link";
-import type { MangaItem } from "@/lib/shngm-types";
+import type { AnyManga } from "@/lib/shngm-types";
 import { normalizeManga, formatCount } from "@/lib/format";
 import { CountryBadge } from "./CountryBadge";
 
-export function CardSlider({ manga, rank }: { manga: MangaItem; rank?: number }) {
+export function CardSlider({ manga, rank }: { manga: AnyManga; rank?: number }) {
   const m = normalizeManga(manga);
   return (
     <Link
@@ -50,7 +52,7 @@ export function CardSlider({ manga, rank }: { manga: MangaItem; rank?: number })
   );
 }
 
-export function Rail({ items, rank = false }: { items: MangaItem[]; rank?: boolean }) {
+export function Rail({ items, rank = false }: { items: AnyManga[]; rank?: boolean }) {
   if (!items.length) return <p className="text-xs text-zinc-600 py-4">Belum ada data.</p>;
   return (
     <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">

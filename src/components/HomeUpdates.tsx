@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { MangaFormat, MangaItem } from "@/lib/shngm-types";
+import type { AnyManga, MangaFormat } from "@/lib/shngm-types";
 import { ComicGrid } from "./ComicGrid";
 import { UpdateRow } from "./UpdateRow";
 
@@ -15,7 +15,7 @@ const FORMATS: { label: string; value: "all" | MangaFormat }[] = [
 export function HomeUpdates({
   byFormat,
 }: {
-  byFormat: Record<"all" | MangaFormat, MangaItem[]>;
+  byFormat: Record<"all" | MangaFormat, AnyManga[]>;
 }) {
   const [format, setFormat] = useState<"all" | MangaFormat>("all");
   const [view, setView] = useState<"grid" | "list">("grid");

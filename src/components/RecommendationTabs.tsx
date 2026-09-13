@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { MangaFormat, MangaItem } from "@/lib/shngm-types";
+import type { AnyManga, MangaFormat } from "@/lib/shngm-types";
 import { Rail } from "./CardSlider";
 
 const TABS: { id: MangaFormat; label: string }[] = [
@@ -15,7 +15,7 @@ export function RecommendationTabs({
   byFormat,
   initial = "manhwa",
 }: {
-  byFormat: Record<MangaFormat, MangaItem[]>;
+  byFormat: Record<MangaFormat, AnyManga[]>;
   initial?: MangaFormat;
 }) {
   const [active, setActive] = useState<MangaFormat>(initial);

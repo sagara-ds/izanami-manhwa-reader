@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { MangaItem } from "@/lib/shngm-types";
+import type { AnyManga } from "@/lib/shngm-types";
 import { normalizeManga, formatCount } from "@/lib/format";
 import { CountryBadge } from "./CountryBadge";
 
-export function Hero({ items }: { items: MangaItem[] }) {
+export function Hero({ items }: { items: AnyManga[] }) {
   const [idx, setIdx] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const paused = useRef(false);
@@ -105,9 +105,9 @@ export function Hero({ items }: { items: MangaItem[] }) {
             {m.year && <span>{m.year}</span>}
           </div>
 
-          {raw.description && (
+          {m.altTitle && (
             <p className="hidden md:block text-zinc-400 text-xs leading-relaxed line-clamp-2">
-              {raw.description.replace(/\s+/g, " ").trim()}
+              {m.altTitle}
             </p>
           )}
 

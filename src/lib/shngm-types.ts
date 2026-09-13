@@ -116,3 +116,30 @@ export interface GenreItem {
   slug: string;
   name: string;
 }
+
+/**
+ * Slim homepage DTO: only fields rendered on the landing page.
+ * (Deviasi dari plan: ditaruh di sini, bukan file home-types.ts,
+ * agar satu hub tipe dengan MangaItem dan menghindari import cycle
+ * dengan format.ts yang sudah mengimpor dari file ini.)
+ */
+export interface HomeManga {
+  manga_id: string;
+  title: string;
+  alternative_title: string;
+  cover_image_url: string;
+  cover_portrait_url: string;
+  view_count: number;
+  user_rate: number | null;
+  latest_chapter_number: number | null;
+  latest_chapter_id: string | null;
+  latest_chapter_time: string;
+  country_id: string;
+  release_year: string;
+  bookmark_count: number;
+  status?: number;
+  format?: string;
+  genres: { slug: string; name: string }[];
+}
+
+export type AnyManga = MangaItem | HomeManga;

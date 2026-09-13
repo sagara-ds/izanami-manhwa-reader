@@ -4,6 +4,7 @@ import type {
   ChapterDetail,
   ChapterEntry,
   GenreItem,
+  HomeManga,
   ListType,
   MangaDetail,
   MangaFormat,
@@ -132,6 +133,95 @@ export async function getCompleted(
   });
   const res = await apiGet<MangaItem[]>(`manga/list?${qs}`, 300);
   return { items: res?.data ?? [], meta: res?.meta };
+}
+
+export function toHomeManga(item: MangaItem): HomeManga {
+  const slug = item.taxonomy?.Format?.[0]?.slug?.toLowerCase();
+  return {
+    manga_id: item.manga_id,
+    title: item.title,
+    alternative_title: item.alternative_title,
+    cover_image_url: item.cover_image_url,
+    cover_portrait_url: item.cover_portrait_url,
+    view_count: item.view_count,
+    user_rate: item.user_rate,
+    latest_chapter_number: item.latest_chapter_number,
+    latest_chapter_id: item.latest_chapter_id,
+    latest_chapter_time: item.latest_chapter_time,
+    country_id: item.country_id,
+    release_year: item.release_year,
+    bookmark_count: item.bookmark_count,
+    status: item.status,
+    format: slug === "manhwa" || slug === "manga" || slug === "manhua" ? slug : undefined,
+    genres: (item.taxonomy?.Genre ?? []).map((g) => ({ slug: g.slug, name: g.name })),
+  };
+}
+
+export async function getHomeRecommended(format: MangaFormat, pageSize = 12): Promise<HomeManga[]> {
+  const qs = new URLSearchParams({
+    format,
+    page: "1",
+    page_size: String(pageSize),
+    is_recommended: "true",
+    sort: "latest",
+    sort_order: "desc",
+  });
+  const res = await apiGet<MangaItem[]>(`manga/list?${qs}`, 300);
+  return (res?.data ?? []).map(toHomeManga);
+}
+
+export async function getHomePopular(pageSize = 12): Promise<HomeManga[]> {
+  const qs = new URLSearchParams({
+    page: "1",
+    page_size: String(pageSize),
+    genre_include_mode: "or",
+    genre_exclude_mode: "or",
+    sort: "popularity",
+    sort_order: "desc",
+  });
+  const res = await apiGet<MangaItem[]>(`manga/list?${qs}`, 120);
+  return (res?.data ?? []).map(toHomeManga);
+}
+
+export async function getHomeTop(pageSize = 12): Promise<HomeManga[]> {
+  const qs = new URLSearchParams({
+    filter: "all_time",
+    page: "1",
+    page_size: String(pageSize),
+  });
+  const res = await apiGet<MangaItem[]>(`manga/top?${qs}`, 600);
+  return (res?.data ?? []).map(toHomeManga);
+}
+
+export async function getHomeCompleted(pageSize = 12): Promise<HomeManga[]> {
+  const qs = new URLSearchParams({
+    page: "1",
+    page_size: String(pageSize),
+    genre_include_mode: "or",
+    genre_exclude_mode: "or",
+    status: "completed",
+    sort: "latest",
+    sort_order: "desc",
+  });
+  const res = await apiGet<MangaItem[]>(`manga/list?${qs}`, 600);
+  return (res?.data ?? []).map(toHomeManga);
+}
+
+export async function getHomeUpdates(
+  format: "all" | MangaFormat,
+  pageSize = 18,
+): Promise<HomeManga[]> {
+  const qs = new URLSearchParams({
+    type: "project",
+    page: "1",
+    page_size: String(pageSize),
+    is_update: "true",
+    sort: "latest",
+    sort_order: "desc",
+  });
+  if (format !== "all") qs.set("format", format);
+  const res = await apiGet<MangaItem[]>(`manga/list?${qs}`, 120);
+  return (res?.data ?? []).map(toHomeManga);
 }
 
 export async function searchManga(
@@ -267,7 +357,7 @@ export async function getAnnouncements(
 }
 
 export async function getGenres(): Promise<GenreItem[]> {
-  const res = await apiGet<GenreItem[]>(`genre/list`, 600);
+  const res = await apiGet<GenreItem[]>(`genre/list`, 3600);
   return res?.data ?? [];
 }
 

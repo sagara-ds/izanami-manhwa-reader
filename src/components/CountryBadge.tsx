@@ -1,3 +1,5 @@
+"use client";
+
 import { countryFlag } from "@/lib/format";
 
 function tone(code?: string): string {

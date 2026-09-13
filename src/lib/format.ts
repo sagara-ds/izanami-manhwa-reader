@@ -1,4 +1,4 @@
-import type { GenreItem, MangaItem } from "./shngm-types";
+import type { GenreItem, HomeManga, MangaItem } from "./shngm-types";
 
 const BANNED_GENRES = ["adult", "ecchi", "smut", "hentai", "erotica"];
 const JUNK_GENRES = ["dra", "dra-genre"];
@@ -39,7 +39,9 @@ export interface NormalizedManga {
   chapters: { chapter_id: string; chapter_number: number; created_at: string }[];
 }
 
-export function normalizeManga(m: MangaItem): NormalizedManga {
+export function normalizeManga(m: MangaItem | HomeManga): NormalizedManga {
+  const tax = "taxonomy" in m ? (m as MangaItem).taxonomy : undefined;
+  const home = m as HomeManga;
   return {
     id: m?.manga_id,
     title: m?.title ?? "",
@@ -52,8 +54,8 @@ export function normalizeManga(m: MangaItem): NormalizedManga {
     bookmarks: m?.bookmark_count ?? 0,
     year: m?.release_year ?? "",
     status: m?.status,
-    format: m?.taxonomy?.Format?.[0]?.name ?? "",
-    genres: m?.taxonomy?.Genre ?? [],
+    format: tax ? (tax.Format?.[0]?.name ?? "") : (home.format ?? ""),
+    genres: tax ? (tax.Genre ?? []) : (home.genres ?? []),
     chapterNumber: m?.latest_chapter_number ?? null,
     chapterId: m?.latest_chapter_id ?? null,
     chapterTime: m?.latest_chapter_time ?? "",

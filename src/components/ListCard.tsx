@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { MangaItem } from "@/lib/shngm-types";
+import type { AnyManga } from "@/lib/shngm-types";
 import { normalizeManga, formatCount } from "@/lib/format";
 import { CountryBadge } from "./CountryBadge";
 
@@ -10,7 +10,7 @@ function rankStyle(i: number): string {
   return "bg-zinc-800 text-zinc-500";
 }
 
-export function ListCard({ index, manga }: { index: number; manga: MangaItem }) {
+export function ListCard({ index, manga }: { index: number; manga: AnyManga }) {
   const m = normalizeManga(manga);
   return (
     <Link

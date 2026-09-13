@@ -1,9 +1,11 @@
+"use client";
+
 import Link from "next/link";
-import type { MangaItem } from "@/lib/shngm-types";
+import type { AnyManga } from "@/lib/shngm-types";
 import { normalizeManga, timeAgoShort, isRecent } from "@/lib/format";
 import { CountryBadge } from "./CountryBadge";
 
-export function UpdateRow({ manga }: { manga: MangaItem }) {
+export function UpdateRow({ manga }: { manga: AnyManga }) {
   const m = normalizeManga(manga);
   const fresh = m.chapterTime && isRecent(m.chapterTime, 1);
   return (
