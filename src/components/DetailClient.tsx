@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect -- sync localStorage once on mount */
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { formatCount, timeAgo, isRecent } from "@/lib/format";
 import { CheckIcon, PlayIcon } from "./icons";
@@ -122,44 +122,81 @@ export function ChapterBrowser({
   initialChapters: ChapterEntry[];
   totalChapters: number;
 }) {
+  const PAGE_SIZE = 60;
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [reversed, setReversed] = useState(false);
   const [readMap, setReadMap] = useState<Record<string, number>>({});
   const [allChapters, setAllChapters] = useState<ChapterEntry[]>(initialChapters);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const firstRun = useRef(true);
 
   useEffect(() => {
     setReadMap(getReadMap());
   }, []);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 400);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // Refetch page 1 whenever search text or sort order changes.
+  // First mount is skipped: SSR already delivered page 1.
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    let cancelled = false;
+    async function run() {
+      setLoadingSearch(true);
+      try {
+        const res = await fetch(
+          `/api/chapters/${mangaId}?page=1&limit=${PAGE_SIZE}&order=${reversed ? "asc" : "desc"}&search=${encodeURIComponent(debouncedQuery)}`
+        );
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setAllChapters(data.chapters ?? []);
+          setPage(1);
+        }
+      } catch {}
+      if (!cancelled) setLoadingSearch(false);
+    }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedQuery, reversed, mangaId]);
+
   const loadMore = useCallback(async () => {
+    if (loading) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/chapters/${mangaId}?offset=${allChapters.length}&limit=100`);
+      const next = page + 1;
+      const res = await fetch(
+        `/api/chapters/${mangaId}?page=${next}&limit=${PAGE_SIZE}&order=${reversed ? "asc" : "desc"}&search=${encodeURIComponent(debouncedQuery)}`
+      );
       if (res.ok) {
         const data = await res.json();
-        setAllChapters((prev) => [...prev, ...data.chapters]);
-        if (data.done || allChapters.length + data.chapters.length >= totalChapters) {
-          setExpanded(true);
-        }
+        setAllChapters((prev) => [...prev, ...(data.chapters ?? [])]);
+        setPage(next);
       }
     } catch {}
     setLoading(false);
-  }, [allChapters.length, mangaId, totalChapters]);
+  }, [loading, page, mangaId, reversed, debouncedQuery]);
 
-  const filtered = allChapters.filter((c) =>
-    query ? String(c.chapter_number).includes(query.trim()) : true
-  );
-  const ordered = reversed ? [...filtered].reverse() : filtered;
+  // Server already returns the requested order; render everything loaded.
+  const filtered = allChapters;
+  const ordered = filtered;
 
   function openChapter(chapterId: string) {
     markChapterRead(chapterId, mangaId);
     setReadMap((p) => ({ ...p, [chapterId]: Date.now() }));
   }
 
-  const hasMore = expanded && allChapters.length < totalChapters;
-  const showLoadMore = !expanded || hasMore;
+  const hasMore = allChapters.length < totalChapters;
 
   return (
     <div className="bg-[#18181b] rounded-2xl border border-zinc-800/50 overflow-hidden">
@@ -192,11 +229,11 @@ export function ChapterBrowser({
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {!loadingSearch && filtered.length === 0 ? (
         <p className="py-16 text-center text-sm text-zinc-600">Chapter tidak ditemukan</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 p-3.5">
-          {ordered.slice(0, 100).map((ch) => {
+          {ordered.map((ch) => {
             const read = !!readMap[ch.chapter_id];
             return (
               <Link
@@ -253,14 +290,14 @@ export function ChapterBrowser({
         </div>
       )}
 
-      {showLoadMore && !query && (
+      {hasMore && (
         <div className="flex justify-center pb-5">
           <button
             onClick={loadMore}
-            disabled={loading}
+            disabled={loading || loadingSearch}
             className="px-6 py-2.5 rounded-xl text-sm font-semibold border border-zinc-700/50 bg-[#18181b] text-zinc-300 hover:bg-[#3b82f6] hover:border-[#3b82f6] hover:text-white transition-all cursor-pointer disabled:opacity-50 disabled:cursor-default"
           >
-            {loading ? "Memuat…" : hasMore ? "Muat Lebih Banyak" : "Lihat Semua Chapter"}
+            {loading || loadingSearch ? "Memuat…" : `Muat Lebih Banyak (${allChapters.length}/${totalChapters})`}
           </button>
         </div>
       )}

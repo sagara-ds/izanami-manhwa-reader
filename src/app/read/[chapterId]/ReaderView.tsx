@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { ChapterSearchModal, type ChapterOption } from "@/components/ChapterSearchModal";
+import { ChapterSearchModal } from "@/components/ChapterSearchModal";
 
 export function ReaderView({
   title,
@@ -10,7 +10,7 @@ export function ReaderView({
   images,
   prevHref,
   nextHref,
-  chapters,
+  mangaId,
   currentChapterId,
 }: {
   title: string;
@@ -18,7 +18,7 @@ export function ReaderView({
   images: string[];
   prevHref: string | null;
   nextHref: string | null;
-  chapters: ChapterOption[];
+  mangaId: string;
   currentChapterId: string;
 }) {
   const [uiHidden, setUiHidden] = useState(false);
@@ -151,7 +151,7 @@ export function ReaderView({
       <ChapterSearchModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        chapters={chapters}
+        mangaId={mangaId}
         currentChapterId={currentChapterId}
       />
     </div>

@@ -198,18 +198,48 @@ export async function getChapterList(
   return out;
 }
 
+export interface ChapterListPage {
+  chapters: ChapterEntry[];
+  total: number;
+  totalPages: number;
+}
+
+interface ChapterListItem {
+  chapter_id: string;
+  chapter_number: number;
+  chapter_title?: string;
+  thumbnail_image_url?: string;
+  view_count?: number;
+  release_date?: string;
+  created_at?: string;
+}
+
 export async function getChapterListPaginated(
   mangaId: string,
   page = 1,
-  pageSize = 24,
-): Promise<{ chapters: ChapterEntry[]; total: number; totalPages: number }> {
-  const all = await getChapterList(mangaId);
-  const total = all.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = (safePage - 1) * pageSize;
-  const slice = all.slice(start, start + pageSize);
-  return { chapters: slice, total, totalPages };
+  pageSize = 60,
+  order: "asc" | "desc" = "desc",
+  search = "",
+): Promise<ChapterListPage> {
+  const qs = new URLSearchParams({
+    page: String(Math.max(1, page)),
+    page_size: String(Math.min(Math.max(1, pageSize), 100)),
+    sort_by: "chapter_number",
+    sort_order: order,
+  });
+  if (search.trim()) qs.set("search", search.trim());
+  const res = await apiGet<ChapterListItem[]>(`chapter/${mangaId}/list?${qs}`, 300);
+  const chapters = (res?.data ?? []).map((c) => ({
+    chapter_id: c.chapter_id,
+    chapter_number: c.chapter_number,
+    created_at: c.release_date ?? c.created_at ?? "",
+    chapter_title: c.chapter_title,
+    thumbnail_image_url: c.thumbnail_image_url,
+    view_count: c.view_count,
+  }));
+  const total = res?.meta?.total_record ?? chapters.length;
+  const totalPages = res?.meta?.total_page ?? Math.max(1, Math.ceil(total / pageSize));
+  return { chapters, total, totalPages };
 }
 
 export async function getSlider(): Promise<SliderItem[]> {

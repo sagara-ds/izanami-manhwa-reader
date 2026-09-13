@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ReaderView } from "./ReaderView";
 import { HistoryRecorder } from "@/components/DetailClient";
-import { chapterImageUrls, getChapterDetail, getChapterList, getMangaDetail } from "@/lib/shngm";
+import { chapterImageUrls, getChapterDetail, getMangaDetail } from "@/lib/shngm";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
@@ -36,17 +36,6 @@ export default async function ReadPage({
   const images = chapterImageUrls(ch);
 
   const title = detail?.title ?? "Komik";
-  const embedded = (detail?.chapters ?? []).map((c) => ({
-    chapter_id: c.chapter_id,
-    chapter_number: c.chapter_number,
-  }));
-  const chapters =
-    embedded.length > 0
-      ? embedded.slice(0, 100)
-      : (await getChapterList(ch.manga_id, 100)).map((c) => ({
-          chapter_id: c.chapter_id,
-          chapter_number: c.chapter_number,
-        }));
 
   return (
     <div className="min-h-screen bg-black">
@@ -64,7 +53,7 @@ export default async function ReadPage({
           images={images}
           prevHref={ch.prev_chapter_id ? `/read/${ch.prev_chapter_id}` : null}
           nextHref={ch.next_chapter_id ? `/read/${ch.next_chapter_id}` : null}
-          chapters={chapters}
+          mangaId={ch.manga_id}
           currentChapterId={ch.chapter_id}
         />
       </main>

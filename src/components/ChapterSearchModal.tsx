@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/set-state-in-effect -- reset search query each time modal opens */
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SearchIcon } from "./icons";
 
 export interface ChapterOption {
@@ -10,23 +10,36 @@ export interface ChapterOption {
   chapter_number: number;
 }
 
+const PAGE_SIZE = 60;
+
 export function ChapterSearchModal({
   open,
   onClose,
-  chapters,
+  mangaId,
   currentChapterId,
 }: {
   open: boolean;
   onClose: () => void;
-  chapters: ChapterOption[];
+  mangaId: string;
   currentChapterId: string;
 }) {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [desc, setDesc] = useState(true);
+  const [chapters, setChapters] = useState<ChapterOption[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const firstRun = useRef(true);
 
   useEffect(() => {
     if (!open) return;
     setQuery("");
+    setDebouncedQuery("");
+    setDesc(true);
+    setPage(1);
+    setTotal(0);
+    firstRun.current = true;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -39,13 +52,48 @@ export function ChapterSearchModal({
     };
   }, [open, onClose]);
 
+  const fetchPage = useCallback(
+    async (p: number, q: string, d: boolean, append: boolean) => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/chapters/${mangaId}?page=${p}&limit=${PAGE_SIZE}&order=${d ? "desc" : "asc"}&search=${encodeURIComponent(q)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setChapters((prev) => (append ? [...prev, ...(data.chapters ?? [])] : (data.chapters ?? [])));
+          setTotal(data.total ?? 0);
+          setPage(p);
+        }
+      } catch {}
+      setLoading(false);
+    },
+    [mangaId]
+  );
+
+  // Initial load on open + refetch page 1 on search/sort change (debounced search).
+  useEffect(() => {
+    if (!open) return;
+    if (firstRun.current) {
+      firstRun.current = false;
+      void fetchPage(1, "", true, false);
+      return;
+    }
+    const t = setTimeout(() => {
+      void fetchPage(1, debouncedQuery, desc, false);
+    }, debouncedQuery ? 400 : 0);
+    return () => clearTimeout(t);
+  }, [open, debouncedQuery, desc, fetchPage]);
+
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 400);
+    return () => clearTimeout(t);
+  }, [query, open]);
+
   if (!open) return null;
 
-  const q = query.trim();
-  const filtered = chapters.filter((c) =>
-    q ? String(c.chapter_number).includes(q) : true
-  );
-  const ordered = desc ? filtered : [...filtered].reverse();
+  const hasMore = chapters.length < total;
 
   return (
     <div
@@ -61,7 +109,9 @@ export function ChapterSearchModal({
         className="relative w-full max-w-xl max-h-[80dvh] flex flex-col bg-[#111114] border border-white/10 rounded-2xl p-5 sm:p-6 shadow-2xl"
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg sm:text-xl font-extrabold text-white">Search Chapter</h2>
+          <h2 className="text-lg sm:text-xl font-extrabold text-white">
+            Search Chapter{total > 0 && <span className="ml-2 text-xs font-bold text-zinc-500">{total}</span>}
+          </h2>
           <button
             onClick={onClose}
             aria-label="Tutup"
@@ -95,10 +145,10 @@ export function ChapterSearchModal({
         </div>
 
         <div className="flex-1 overflow-y-auto flex flex-col gap-2.5">
-          {ordered.length === 0 ? (
+          {chapters.length === 0 && !loading ? (
             <p className="py-10 text-center text-sm text-zinc-500">Chapter tidak ditemukan</p>
           ) : (
-            ordered.map((c) => {
+            chapters.map((c) => {
               const active = c.chapter_id === currentChapterId;
               return (
                 <Link
@@ -115,6 +165,15 @@ export function ChapterSearchModal({
                 </Link>
               );
             })
+          )}
+          {loading && <p className="py-4 text-center text-xs text-zinc-500">Memuat…</p>}
+          {hasMore && !loading && (
+            <button
+              onClick={() => void fetchPage(page + 1, debouncedQuery, desc, true)}
+              className="px-4 py-3 rounded-2xl text-xs font-bold text-[#3b82f6] bg-[#3b82f6]/10 border border-[#3b82f6]/20 hover:bg-[#3b82f6]/20 transition-all cursor-pointer"
+            >
+              Muat Lebih Banyak ({chapters.length}/{total})
+            </button>
           )}
         </div>
       </div>

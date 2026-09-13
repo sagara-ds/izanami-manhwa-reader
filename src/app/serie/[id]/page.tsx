@@ -4,7 +4,7 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Synopsis, BookmarkButton, ChapterBrowser, ReadButtons } from "@/components/DetailClient";
 import { CountryBadge } from "@/components/CountryBadge";
-import { getChapterList, getMangaDetail } from "@/lib/shngm";
+import { getChapterListPaginated, getMangaDetail } from "@/lib/shngm";
 import { formatCount, safeGenres } from "@/lib/format";
 import type { Metadata } from "next";
 
@@ -34,10 +34,11 @@ export default async function SeriePage({
 
   const detail = await getMangaDetail(id);
   if (!detail) notFound();
-  const chapters = await getChapterList(id, 50);
+  const firstPage = await getChapterListPaginated(id, 1, 60, "desc");
 
   // Sort newest first
-  const sortedChapters = [...chapters].sort((a, b) => b.chapter_number - a.chapter_number);
+  const sortedChapters = [...firstPage.chapters].sort((a, b) => b.chapter_number - a.chapter_number);
+  const totalChapters = firstPage.total > 0 ? firstPage.total : sortedChapters.length;
 
   const genres = safeGenres(detail.taxonomy?.Genre ?? []);
   const type = detail.taxonomy?.Type?.[0]?.name;
@@ -125,10 +126,10 @@ export default async function SeriePage({
                   <span className={`w-1.5 h-1.5 rounded-full ${detail.status === 1 ? "bg-emerald-400 animate-pulse" : "bg-zinc-500"}`} />
                   {status}
                 </span>
-                {chapters.length > 0 && (
+                {totalChapters > 0 && (
                   <span className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs font-semibold text-zinc-300">
                     <span aria-hidden="true" className="text-[#3b82f6] text-[10px]">▤</span>
-                    {chapters.length} Chapter
+                    {totalChapters} Chapter
                   </span>
                 )}
                 {detail.view_count > 0 && (
@@ -178,7 +179,7 @@ export default async function SeriePage({
 
       <div className="max-w-screen-xl mx-auto px-4 pb-10 w-full flex-1 mt-5">
         {synopsis && <Synopsis text={synopsis} />}
-        <ChapterBrowser mangaId={id} initialChapters={sortedChapters} totalChapters={chapters.length} />
+        <ChapterBrowser mangaId={id} initialChapters={sortedChapters} totalChapters={totalChapters} />
       </div>
 
       <Footer />
