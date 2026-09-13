@@ -8,20 +8,49 @@ import { ButtonCorner } from "@/components/ButtonCorner";
 import { HistoryIcon, PlayIcon } from "@/components/icons";
 import { timeAgo } from "@/lib/format";
 import { clearHistory, getHistory, removeHistory, type HistoryEntry } from "@/lib/storage";
-import { pullCloudHistory } from "@/lib/sync";
+import { cloudRemoveHistory, isCloudAvailable } from "@/lib/cloud";
+import { syncNow } from "@/lib/sync";
 
 export function HistoryView() {
   const [items, setItems] = useState<HistoryEntry[]>([]);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   function load() {
     setItems(getHistory());
   }
 
+  async function removeOne(mangaId: string) {
+    removeHistory(mangaId);
+    load();
+    if (await isCloudAvailable()) {
+      try {
+        await cloudRemoveHistory(mangaId);
+      } catch (e) {
+        setSyncError(e instanceof Error ? e.message : "Gagal hapus di cloud");
+      }
+    }
+  }
+
+  async function clear() {
+    const prev = getHistory();
+    clearHistory();
+    load();
+    if (await isCloudAvailable()) {
+      try {
+        await Promise.all(prev.map((it) => cloudRemoveHistory(it.manga_id)));
+      } catch (e) {
+        setSyncError(e instanceof Error ? e.message : "Gagal bersihkan cloud");
+      }
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      await pullCloudHistory();
-      if (!cancelled) load();
+      const res = await syncNow();
+      if (cancelled) return;
+      if (res && res.errors.length > 0) setSyncError(res.errors[0]);
+      load();
     })();
     return () => {
       cancelled = true;
@@ -45,16 +74,19 @@ export function HistoryView() {
           </div>
           {items.length > 0 && (
             <button
-              onClick={() => {
-                clearHistory();
-                load();
-              }}
+              onClick={() => void clear()}
               className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-800/60 border border-zinc-700/40 text-zinc-400 hover:text-[#3b82f6] hover:border-[#3b82f6]/30 transition-all cursor-pointer flex-shrink-0"
             >
               Bersihkan
             </button>
           )}
         </div>
+
+        {syncError && (
+          <p className="mb-4 text-xs text-red-400">
+            Sinkron cloud gagal sebagian: {syncError}
+          </p>
+        )}
 
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3 text-zinc-600">
@@ -102,10 +134,7 @@ export function HistoryView() {
                     </Link>
                   )}
                   <button
-                    onClick={() => {
-                      removeHistory(it.manga_id);
-                      load();
-                    }}
+                    onClick={() => void removeOne(it.manga_id)}
                     aria-label="Hapus dari riwayat"
                     className="px-2.5 py-2 rounded-xl text-zinc-500 hover:text-[#3b82f6] bg-zinc-800/50 border border-zinc-700/40 hover:border-[#3b82f6]/30 transition-all cursor-pointer text-xs"
                   >

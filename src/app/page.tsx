@@ -72,7 +72,7 @@ export default async function HomePage() {
               </Panel>
               <Panel title="Rating Tertinggi" href="/top" Icon={StarIcon} iconClass="text-yellow-400">
                 {allTime.slice(0, 8).map((m, i) => (
-                  <ListCard key={m.manga_id} index={i} manga={m} />
+                  <ListCard key={m.manga_id} index={i} manga={m} metric="rating" />
                 ))}
               </Panel>
               <GenrePanel genres={genres} />

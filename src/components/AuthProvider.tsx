@@ -4,6 +4,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { syncNow } from "@/lib/sync";
 
 interface AuthCtx {
   user: User | null;
@@ -40,10 +41,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.session?.user ?? null);
       setLoading(false);
     });
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next);
       setUser(next?.user ?? null);
       setLoading(false);
+      // Upload data lokal yang menumpuk saat logged-out, lalu tarik dari cloud.
+      if (event === "SIGNED_IN") {
+        void syncNow();
+      }
     });
     return () => {
       alive = false;

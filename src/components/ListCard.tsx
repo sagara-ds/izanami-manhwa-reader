@@ -10,7 +10,15 @@ function rankStyle(i: number): string {
   return "bg-zinc-800 text-zinc-500";
 }
 
-export function ListCard({ index, manga }: { index: number; manga: AnyManga }) {
+export function ListCard({
+  index,
+  manga,
+  metric = "views",
+}: {
+  index: number;
+  manga: AnyManga;
+  metric?: "views" | "rating";
+}) {
   const m = normalizeManga(manga);
   return (
     <Link
@@ -36,7 +44,16 @@ export function ListCard({ index, manga }: { index: number; manga: AnyManga }) {
           {m.chapterNumber != null && (
             <span className="text-[#3b82f6] font-bold">Ch {m.chapterNumber}</span>
           )}
-          {m.views > 0 && <span>{formatCount(m.views)}</span>}
+          {metric === "rating" ? (
+            m.rating != null && (
+              <span className="flex items-center gap-0.5 font-bold text-yellow-400">
+                <span aria-hidden="true">★</span>
+                {m.rating}
+              </span>
+            )
+          ) : (
+            m.views > 0 && <span>{formatCount(m.views)}</span>
+          )}
           <CountryBadge code={m.country} />
         </div>
       </div>

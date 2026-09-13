@@ -11,7 +11,7 @@ import { getMangaDetail } from "@/lib/shngm";
 import type { MangaItem } from "@/lib/shngm-types";
 import { getBookmarks, setBookmarks } from "@/lib/storage";
 import { cloudRemoveFavorite, isCloudAvailable } from "@/lib/cloud";
-import { pullCloudBookmarks } from "@/lib/sync";
+import { syncNow } from "@/lib/sync";
 
 export function BookmarkView() {
   const [ids, setIds] = useState<string[]>([]);
@@ -21,8 +21,8 @@ export function BookmarkView() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const merged = await pullCloudBookmarks();
-      const bm = merged ?? getBookmarks();
+      await syncNow();
+      const bm = getBookmarks();
       if (cancelled) return;
       setIds(bm);
       if (bm.length === 0) {

@@ -59,15 +59,27 @@ export async function cloudRemoveFavorite(seriesSlug: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function cloudGetHistory(): Promise<{ series_slug: string; chapter_id: string; page: number }[]> {
+export async function cloudGetHistory(): Promise<{ series_slug: string; chapter_id: string; page: number; updated_at: string }[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("history")
-    .select("series_slug, chapter_id, page")
+    .select("series_slug, chapter_id, page, updated_at")
     .order("updated_at", { ascending: false })
     .limit(50);
   if (error) throw error;
   return data ?? [];
+}
+
+export async function cloudRemoveHistory(seriesSlug: string): Promise<void> {
+  const uid = await userId();
+  if (!uid) throw new Error("not authenticated");
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("history")
+    .delete()
+    .eq("user_id", uid)
+    .eq("series_slug", seriesSlug);
+  if (error) throw error;
 }
 
 export async function cloudSaveHistory(seriesSlug: string, chapterId: string, page = 1): Promise<void> {
