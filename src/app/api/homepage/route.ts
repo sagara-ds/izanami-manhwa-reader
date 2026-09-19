@@ -5,11 +5,15 @@ import {
   getHomeRecommended,
   getHomeUpdates,
 } from "@/lib/shngm";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 /** Batched homepage payload for CSR sections (hero + sidebar stay SSR). */
-export async function GET() {
+export async function GET(req: Request) {
+  // Heavy fan-out (9 upstream calls) — stricter bucket.
+  const rl = checkRateLimit(req, { limit: 20, windowS: 60, prefix: "api:homepage" });
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfter);
   const [manhwa, manga, manhua, completed, updAll, updManhwa, updManga, updManhua, genres] =
     await Promise.all([
       getHomeRecommended("manhwa", 12),

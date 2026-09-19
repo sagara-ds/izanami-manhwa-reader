@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { ButtonCorner } from "@/components/ButtonCorner";
-import { isAuthConfigured, useAuth } from "@/components/AuthProvider";
+import { isAuthConfigured } from "@/components/AuthProvider";
 import { Turnstile, isTurnstileConfigured, type TurnstileHandle } from "@/components/Turnstile";
 
 export default function LoginPage() {
@@ -26,7 +26,6 @@ export default function LoginPage() {
 function LoginBox() {
   const router = useRouter();
   const sp = useSearchParams();
-  const { signInMagicLink } = useAuth();
   const [email, setEmail] = useState("");
   const [captcha, setCaptcha] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(sp.get("error") === "link_expired" ? "Link kedaluwarsa atau tidak valid. Kirim link baru." : null);
@@ -52,7 +51,16 @@ function LoginBox() {
     setBusy(true);
     setError(null);
     try {
-      await signInMagicLink(email.trim(), captcha ?? undefined);
+      const res = await fetch("/api/auth/otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), captchaToken: captcha ?? undefined }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+      if (!res.ok) {
+        setError(json.error ?? "Gagal kirim link");
+        return;
+      }
       setSent(true);
       setCooldown(60);
       const t = setInterval(() => {
@@ -64,8 +72,8 @@ function LoginBox() {
           return c - 1;
         });
       }, 1000);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal kirim link");
+    } catch {
+      setError("Gagal kirim link. Coba lagi beberapa saat.");
     } finally {
       // Token single-use: selalu reset agar token berikutnya fresh.
       turnstileRef.current?.reset();

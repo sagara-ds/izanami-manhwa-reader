@@ -14,6 +14,7 @@ const INFO_LINKS = [
   { name: "Bookmark", href: "/bookmark" },
   { name: "Riwayat Baca", href: "/history" },
   { name: "Info & Privasi", href: "/info" },
+  { name: "DMCA & Hak Cipta", href: "/dmca" },
 ];
 
 export function Footer() {
@@ -76,7 +77,7 @@ export function Footer() {
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="text-xs text-zinc-600">
-            © 2026 Izanami. All Rights Reserved.
+            © 2026 Izanami. All Rights Reserved. Seluruh komik milik penerbit masing-masing.
           </span>
           <span className="text-[11px] text-zinc-700">
             Content-first, dark-mode native, high density reader.

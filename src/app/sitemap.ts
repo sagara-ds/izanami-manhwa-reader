@@ -3,6 +3,9 @@ import type { MetadataRoute } from "next";
 const SITE_URL = "https://izanami.sagarads-portofolio.my.id";
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  // Only public landing pages. Detail/reader pages are noindex (see
+  // serie/[id] + read/[chapterId] metadata) and private pages must not
+  // be indexed.
   const routes = [
     "",
     "/explore",
@@ -13,11 +16,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/updates",
     "/recommended",
     "/search",
-    "/library",
-    "/bookmark",
-    "/history",
     "/info",
-    "/login",
+    "/dmca",
   ];
   return routes.map((path) => ({
     url: `${SITE_URL}${path}`,

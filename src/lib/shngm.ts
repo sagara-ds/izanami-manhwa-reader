@@ -43,6 +43,7 @@ async function apiGet<T>(
     const res = await fetch(`${API_BASE}${path}`, {
       headers: headers(token),
       next: { revalidate },
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
     const json = (await res.json()) as ApiEnvelope<T>;
@@ -236,11 +237,12 @@ export async function searchManga(
   q: string,
   page = 1,
 ): Promise<{ items: MangaItem[]; meta?: PageMeta }> {
-  if (!q.trim()) return { items: [] };
+  const query = q.trim().slice(0, 100);
+  if (query.length < 2) return { items: [] };
   const qs = new URLSearchParams({
-    page: String(page),
+    page: String(Math.min(Math.max(1, page), 1000)),
     page_size: "24",
-    q: q.trim(),
+    q: query,
   });
   const res = await apiGet<MangaItem[]>(`manga/list?${qs}`, 60);
   return { items: res?.data ?? [], meta: res?.meta };

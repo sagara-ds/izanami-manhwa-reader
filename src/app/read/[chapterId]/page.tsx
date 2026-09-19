@@ -13,12 +13,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { chapterId } = await params;
   const ch = await getChapterDetail(chapterId);
-  if (!ch) return { title: "Reader — Izanami" };
+  if (!ch) return { title: "Reader — Izanami", robots: { index: false, follow: false } };
   const detail = await getMangaDetail(ch.manga_id);
   const title = detail?.title ?? "Komik";
   return {
     title: `${title} Chapter ${ch.chapter_number} — Izanami Reader`,
     description: `Baca ${title} chapter ${ch.chapter_number} bahasa Indonesia dengan vertical scroll di Izanami.`,
+    robots: { index: false, follow: false },
   };
 }
 

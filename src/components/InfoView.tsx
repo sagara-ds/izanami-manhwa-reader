@@ -32,6 +32,7 @@ const CARDS = [
     body: [
       "Dukung penulis dan penerbit aslinya bila judul yang kamu baca sudah tersedia resmi di wilayahmu.",
       "Jangan menjual ulang, membingkai ulang, atau mengklaim konten dari situs ini sebagai milikmu.",
+      "Pemegang hak dapat mengajukan takedown via halaman DMCA & Hak Cipta.",
     ],
   },
   {
@@ -160,7 +161,10 @@ export function InfoView() {
         </div>
 
         <p className="text-center text-[10px] text-zinc-600 leading-relaxed">
-          Izanami tidak meng-host file media apa pun. Seluruh konten disediakan oleh layanan pihak ketiga.
+          Izanami tidak meng-host file media apa pun. Seluruh konten disediakan oleh layanan pihak ketiga dan milik penerbit masing-masing.{" "}
+          <Link href="/dmca" className="underline hover:text-zinc-400">
+            DMCA & Hak Cipta
+          </Link>
         </p>
       </main>
       <ButtonCorner />

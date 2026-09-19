@@ -21,6 +21,7 @@ export async function generateMetadata({
   return {
     title: `${title} — Izanami Reader`,
     description: detail?.description?.slice(0, 160) ?? `Baca ${title} bahasa Indonesia di Izanami.`,
+    robots: { index: false, follow: true },
   };
 }
 
