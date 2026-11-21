@@ -23,6 +23,8 @@ export default async function SearchPage({
   const res = q ? await searchManga(q, page) : null;
   const comics = res?.items ?? [];
   const totalPage = res?.meta?.total_page;
+  const hasNext = res?.meta?.has_next ?? false;
+  const canNext = totalPage !== undefined ? page < totalPage : hasNext;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#09090b]">
@@ -57,7 +59,9 @@ export default async function SearchPage({
         ) : (
           <>
             <p className="text-xs text-[#71717a] mb-4">
-              {res?.meta?.total_record ?? comics.length} hasil ditemukan.
+              {res?.meta?.total_record != null
+                ? `${res.meta.total_record} hasil ditemukan.`
+                : `${comics.length}${hasNext ? "+" : ""} hasil di halaman ${page}.`}
             </p>
             <ComicGrid comics={comics} />
             <nav aria-label="Halaman" className="mt-8 flex items-center justify-center gap-3">
@@ -77,7 +81,7 @@ export default async function SearchPage({
                 Halaman {page}
                 {totalPage ? ` / ${totalPage}` : ""}
               </span>
-              {totalPage === undefined || page < totalPage ? (
+              {canNext ? (
                 <Link
                   href={`/search?q=${encodeURIComponent(q)}&page=${page + 1}`}
                   className="px-4 py-2 rounded-lg bg-[#1a1a1a] border border-[#27272a] text-xs font-semibold text-[#f4f4f5] hover:border-[#3f3f46]"

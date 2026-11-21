@@ -48,33 +48,39 @@ export async function BrowseView({
   let items: Awaited<ReturnType<typeof getPopular>>["items"] = [];
   let total: number | undefined;
   let totalPages: number | undefined;
+  let hasNext = false;
 
   if (kind === "popular") {
     const res = await getPopular(page, PAGE_SIZE);
     items = res.items;
     total = res.meta?.total_record;
     totalPages = res.meta?.total_page;
+    hasNext = res.meta?.has_next ?? false;
   } else if (kind === "top") {
     const res = await getExplore({ page, pageSize: PAGE_SIZE, sort: "rating", sortOrder: "desc" });
     items = res.items;
     total = res.meta?.total_record;
     totalPages = res.meta?.total_page;
+    hasNext = res.meta?.has_next ?? false;
   } else if (kind === "completed") {
     const res = await getCompleted(page, PAGE_SIZE);
     items = res.items;
     total = res.meta?.total_record;
     totalPages = res.meta?.total_page;
+    hasNext = res.meta?.has_next ?? false;
   } else if (kind === "updates") {
     const res = await getUpdates("project", page, PAGE_SIZE, format === "all" ? undefined : (format as "manhwa" | "manga" | "manhua"));
     items = res.items;
     total = res.meta?.total_record;
     totalPages = res.meta?.total_page;
+    hasNext = res.meta?.has_next ?? false;
   } else if (kind === "recommended") {
     const fmt = format === "all" ? undefined : (format as "manhwa" | "manga" | "manhua");
     const res = await getRecommended(fmt, page, PAGE_SIZE);
     items = res.items;
     total = res.meta?.total_record;
     totalPages = res.meta?.total_page;
+    hasNext = res.meta?.has_next ?? false;
   }
 
   function href(p: number, f = format): string {
@@ -131,7 +137,7 @@ export async function BrowseView({
         )}
 
         {items.length > 0 && (
-          <Pagination page={page} totalPages={totalPages} makeHref={(p) => href(p)} />
+          <Pagination page={page} totalPages={totalPages} hasNext={hasNext} makeHref={(p) => href(p)} />
         )}
       </main>
       <ButtonCorner />

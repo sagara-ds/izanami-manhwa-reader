@@ -112,16 +112,15 @@ export default async function ExplorePage({
     : res.items;
 
   const safe = safeGenreItems(all);
-  const count = res.meta?.total_record ?? res.items.length;
+  const totalRecord = res.meta?.total_record;
   const totalPage = res.meta?.total_page;
+  const hasNext = res.meta?.has_next ?? false;
   const hasFilters = q || genres.length > 0 || excludeGenres.length > 0 || format || type || status || author;
 
   const base = { q, genres, excludeGenres, includeMode, excludeMode, format, type, status, author, sort, order };
   const prevHref = page > 1 ? pageHref({ ...base, page: page - 1 }) : null;
-  const nextHref =
-    totalPage === undefined || page < totalPage
-      ? pageHref({ ...base, page: page + 1 })
-      : null;
+  const canNext = totalPage !== undefined ? page < totalPage : hasNext;
+  const nextHref = canNext ? pageHref({ ...base, page: page + 1 }) : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#09090b] text-white">
@@ -137,7 +136,11 @@ export default async function ExplorePage({
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs text-zinc-500">
-                {count > 0 ? `${count.toLocaleString("id-ID")} judul` : "Jelajahi"}
+                {totalRecord != null
+                  ? `${totalRecord.toLocaleString("id-ID")} judul`
+                  : items.length > 0
+                    ? `${items.length}${hasNext ? "+" : ""} judul${page > 1 ? ` · Hal. ${page}` : ""}`
+                    : "Jelajahi"}
               </span>
             </div>
 

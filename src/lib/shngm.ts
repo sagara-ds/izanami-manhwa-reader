@@ -15,7 +15,7 @@ import type {
 } from "./shngm-types";
 
 const API_BASE = (
-  process.env.SHNGM_API_BASE ?? "https://api.shngm.io/v1/"
+  process.env.SHNGM_API_BASE ?? "https://api.shinigami.io/v1/"
 ).replace(/\/?$/, "/");
 
 const SLIDER_BASE = (
@@ -32,6 +32,15 @@ function headers(token?: string): Record<string, string> {
   };
   if (token) h.Authorization = `Bearer ${token}`;
   return h;
+}
+
+function paginationParams(page: number, pageSize: number): { limit: string; offset: string } {
+  const safePage = Math.max(1, page);
+  const safeLimit = Math.max(1, pageSize);
+  return {
+    limit: String(safeLimit),
+    offset: String((safePage - 1) * safeLimit),
+  };
 }
 
 async function apiGet<T>(
@@ -60,10 +69,9 @@ export async function getRecommended(
   pageSize = 30,
 ): Promise<{ items: MangaItem[]; meta?: PageMeta }> {
   const qs = new URLSearchParams({
-    page: String(page),
-    page_size: String(pageSize),
+    ...paginationParams(page, pageSize),
     is_recommended: "true",
-    sort: "latest",
+    sort: "popularity",
     sort_order: "desc",
   });
   if (format) qs.set("format", format);
@@ -77,8 +85,7 @@ export async function getTop(
 ): Promise<MangaItem[]> {
   const qs = new URLSearchParams({
     filter,
-    page: "1",
-    page_size: String(pageSize),
+    limit: String(pageSize),
   });
   const res = await apiGet<MangaItem[]>(`manga/top?${qs}`, 300);
   return res?.data ?? [];
@@ -92,8 +99,7 @@ export async function getUpdates(
 ): Promise<{ items: MangaItem[]; meta?: PageMeta }> {
   const qs = new URLSearchParams({
     type,
-    page: String(page),
-    page_size: String(pageSize),
+    ...paginationParams(page, pageSize),
     is_update: "true",
     sort: "latest",
     sort_order: "desc",
@@ -108,8 +114,7 @@ export async function getPopular(
   pageSize = 24,
 ): Promise<{ items: MangaItem[]; meta?: PageMeta }> {
   const qs = new URLSearchParams({
-    page: String(page),
-    page_size: String(pageSize),
+    ...paginationParams(page, pageSize),
     genre_include_mode: "or",
     genre_exclude_mode: "or",
     sort: "popularity",
@@ -124,8 +129,7 @@ export async function getCompleted(
   pageSize = 24,
 ): Promise<{ items: MangaItem[]; meta?: PageMeta }> {
   const qs = new URLSearchParams({
-    page: String(page),
-    page_size: String(pageSize),
+    ...paginationParams(page, pageSize),
     genre_include_mode: "or",
     genre_exclude_mode: "or",
     status: "completed",
@@ -161,10 +165,10 @@ export function toHomeManga(item: MangaItem): HomeManga {
 export async function getHomeRecommended(format: MangaFormat, pageSize = 12): Promise<HomeManga[]> {
   const qs = new URLSearchParams({
     format,
-    page: "1",
-    page_size: String(pageSize),
+    limit: String(pageSize),
+    offset: "0",
     is_recommended: "true",
-    sort: "latest",
+    sort: "popularity",
     sort_order: "desc",
   });
   const res = await apiGet<MangaItem[]>(`manga/list?${qs}`, 300);
@@ -173,8 +177,8 @@ export async function getHomeRecommended(format: MangaFormat, pageSize = 12): Pr
 
 export async function getHomePopular(pageSize = 12): Promise<HomeManga[]> {
   const qs = new URLSearchParams({
-    page: "1",
-    page_size: String(pageSize),
+    limit: String(pageSize),
+    offset: "0",
     genre_include_mode: "or",
     genre_exclude_mode: "or",
     sort: "popularity",
@@ -188,8 +192,8 @@ export async function getHomeTop(pageSize = 12): Promise<HomeManga[]> {
   // Fetch from the explore endpoint with sort=rating to get properly sorted by rating
   // The /manga/top endpoint sorts by views, not rating
   const qs = new URLSearchParams({
-    page: "1",
-    page_size: String(Math.max(pageSize, 50)),
+    limit: String(Math.max(pageSize, 50)),
+    offset: "0",
     sort: "rating",
     sort_order: "desc",
   });
@@ -204,8 +208,8 @@ export async function getHomeTop(pageSize = 12): Promise<HomeManga[]> {
 
 export async function getHomeCompleted(pageSize = 12): Promise<HomeManga[]> {
   const qs = new URLSearchParams({
-    page: "1",
-    page_size: String(pageSize),
+    limit: String(pageSize),
+    offset: "0",
     genre_include_mode: "or",
     genre_exclude_mode: "or",
     status: "completed",
@@ -222,8 +226,8 @@ export async function getHomeUpdates(
 ): Promise<HomeManga[]> {
   const qs = new URLSearchParams({
     type: "project",
-    page: "1",
-    page_size: String(pageSize),
+    limit: String(pageSize),
+    offset: "0",
     is_update: "true",
     sort: "latest",
     sort_order: "desc",
@@ -240,8 +244,7 @@ export async function searchManga(
   const query = q.trim().slice(0, 100);
   if (query.length < 2) return { items: [] };
   const qs = new URLSearchParams({
-    page: String(Math.min(Math.max(1, page), 1000)),
-    page_size: "24",
+    ...paginationParams(Math.min(Math.max(1, page), 1000), 24),
     q: query,
   });
   const res = await apiGet<MangaItem[]>(`manga/list?${qs}`, 60);
@@ -300,8 +303,8 @@ export async function getChapterList(
 
 export interface ChapterListPage {
   chapters: ChapterEntry[];
-  total: number;
-  totalPages: number;
+  hasNext: boolean;
+  nextCursor: string | null;
 }
 
 interface ChapterListItem {
@@ -316,20 +319,20 @@ interface ChapterListItem {
 
 export async function getChapterListPaginated(
   mangaId: string,
-  page = 1,
   pageSize = 60,
   order: "asc" | "desc" = "desc",
   search = "",
+  cursor = "",
 ): Promise<ChapterListPage> {
   const qs = new URLSearchParams({
-    page: String(Math.max(1, page)),
-    page_size: String(Math.min(Math.max(1, pageSize), 100)),
+    limit: String(Math.min(Math.max(1, pageSize), 100)),
     sort_by: "chapter_number",
     sort_order: order,
   });
+  if (cursor.trim()) qs.set("cursor", cursor.trim());
   if (search.trim()) qs.set("search", search.trim());
   const res = await apiGet<ChapterListItem[]>(`chapter/${mangaId}/list?${qs}`, 300);
-  const chapters = (res?.data ?? []).map((c) => ({
+  const chapters = (Array.isArray(res?.data) ? res.data : []).map((c) => ({
     chapter_id: c.chapter_id,
     chapter_number: c.chapter_number,
     created_at: c.release_date ?? c.created_at ?? "",
@@ -337,9 +340,8 @@ export async function getChapterListPaginated(
     thumbnail_image_url: c.thumbnail_image_url,
     view_count: c.view_count,
   }));
-  const total = res?.meta?.total_record ?? chapters.length;
-  const totalPages = res?.meta?.total_page ?? Math.max(1, Math.ceil(total / pageSize));
-  return { chapters, total, totalPages };
+  const nextCursor = res?.meta?.has_next ? (res.meta.next_cursor ?? null) : null;
+  return { chapters, hasNext: Boolean(nextCursor), nextCursor };
 }
 
 export async function getSlider(): Promise<SliderItem[]> {
@@ -360,14 +362,14 @@ export async function getAnnouncements(
   pageSize = 10,
 ): Promise<AnnouncementItem[]> {
   const res = await apiGet<AnnouncementItem[]>(
-    `announcement/list?page=1&page_size=${pageSize}`,
+    `announcement/list?limit=${pageSize}`,
     600,
   );
-  return res?.data ?? [];
+  return Array.isArray(res?.data) ? res.data : [];
 }
 
 export async function getGenres(): Promise<GenreItem[]> {
-  const res = await apiGet<GenreItem[]>(`genre/list`, 3600);
+  const res = await apiGet<GenreItem[]>(`taxonomy/list?type=genre&limit=100`, 3600);
   return res?.data ?? [];
 }
 
@@ -402,10 +404,7 @@ export async function getExplore({
   excludeGenres?: string[];
   author?: string;
 }): Promise<{ items: MangaItem[]; meta?: PageMeta }> {
-  const qs = new URLSearchParams({
-    page: String(page),
-    page_size: String(pageSize),
-  });
+  const qs = new URLSearchParams(paginationParams(page, pageSize));
   for (const g of genres) qs.append("genre_include", g);
   for (const g of excludeGenres) qs.append("genre_exclude", g);
   if (type) qs.set("type", type);

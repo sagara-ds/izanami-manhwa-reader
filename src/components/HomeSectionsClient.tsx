@@ -15,7 +15,7 @@ interface HomeData {
   genres: GenreItem[];
 }
 
-const CACHE_KEY = "izanami-home-v1";
+const CACHE_KEY = "izanami-home-v2";
 const CACHE_TTL = 5 * 60 * 1000;
 
 function readCache(): HomeData | null {
@@ -95,9 +95,15 @@ export function HomeSectionsClient({
         const json = (await res.json()) as HomeData;
         if (cancelled) return;
         setData(json);
-        try {
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: json }));
-        } catch {}
+        if (
+          json.updates.all.length > 0 ||
+          json.completed.length > 0 ||
+          json.recommendations.manhwa.length > 0
+        ) {
+          try {
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: json }));
+          } catch {}
+        }
       } catch {
         /* offline / API mati: biarkan cache (kalau ada) atau skeleton */
       }

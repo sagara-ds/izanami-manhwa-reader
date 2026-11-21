@@ -117,10 +117,12 @@ export function ChapterBrowser({
   mangaId,
   initialChapters,
   totalChapters,
+  initialNextCursor = null,
 }: {
   mangaId: string;
   initialChapters: ChapterEntry[];
   totalChapters: number;
+  initialNextCursor?: string | null;
 }) {
   const PAGE_SIZE = 60;
   const [query, setQuery] = useState("");
@@ -128,7 +130,7 @@ export function ChapterBrowser({
   const [reversed, setReversed] = useState(false);
   const [readMap, setReadMap] = useState<Record<string, number>>({});
   const [allChapters, setAllChapters] = useState<ChapterEntry[]>(initialChapters);
-  const [page, setPage] = useState(1);
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor ?? null);
   const [loading, setLoading] = useState(false);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const firstRun = useRef(true);
@@ -154,12 +156,12 @@ export function ChapterBrowser({
       setLoadingSearch(true);
       try {
         const res = await fetch(
-          `/api/chapters/${mangaId}?page=1&limit=${PAGE_SIZE}&order=${reversed ? "asc" : "desc"}&search=${encodeURIComponent(debouncedQuery)}`
+          `/api/chapters/${mangaId}?limit=${PAGE_SIZE}&order=${reversed ? "asc" : "desc"}&search=${encodeURIComponent(debouncedQuery)}`
         );
         if (res.ok && !cancelled) {
           const data = await res.json();
           setAllChapters(data.chapters ?? []);
-          setPage(1);
+          setNextCursor(data.nextCursor ?? null);
         }
       } catch {}
       if (!cancelled) setLoadingSearch(false);
@@ -171,21 +173,24 @@ export function ChapterBrowser({
   }, [debouncedQuery, reversed, mangaId]);
 
   const loadMore = useCallback(async () => {
-    if (loading) return;
+    if (loading || !nextCursor) return;
     setLoading(true);
     try {
-      const next = page + 1;
       const res = await fetch(
-        `/api/chapters/${mangaId}?page=${next}&limit=${PAGE_SIZE}&order=${reversed ? "asc" : "desc"}&search=${encodeURIComponent(debouncedQuery)}`
+        `/api/chapters/${mangaId}?cursor=${encodeURIComponent(nextCursor)}&limit=${PAGE_SIZE}&order=${reversed ? "asc" : "desc"}&search=${encodeURIComponent(debouncedQuery)}`
       );
       if (res.ok) {
         const data = await res.json();
-        setAllChapters((prev) => [...prev, ...(data.chapters ?? [])]);
-        setPage(next);
+        const incoming: ChapterEntry[] = data.chapters ?? [];
+        setAllChapters((prev) => {
+          const seen = new Set(prev.map((c) => c.chapter_id));
+          return [...prev, ...incoming.filter((c) => !seen.has(c.chapter_id))];
+        });
+        setNextCursor(data.nextCursor ?? null);
       }
     } catch {}
     setLoading(false);
-  }, [loading, page, mangaId, reversed, debouncedQuery]);
+  }, [loading, nextCursor, mangaId, reversed, debouncedQuery]);
 
   // Server already returns the requested order; render everything loaded.
   const filtered = allChapters;
@@ -196,7 +201,7 @@ export function ChapterBrowser({
     setReadMap((p) => ({ ...p, [chapterId]: Date.now() }));
   }
 
-  const hasMore = allChapters.length < totalChapters;
+  const hasMore = Boolean(nextCursor);
 
   return (
     <div className="bg-[#18181b] rounded-2xl border border-zinc-800/50 overflow-hidden">
@@ -297,7 +302,11 @@ export function ChapterBrowser({
             disabled={loading || loadingSearch}
             className="px-6 py-2.5 rounded-xl text-sm font-semibold border border-zinc-700/50 bg-[#18181b] text-zinc-300 hover:bg-[#3b82f6] hover:border-[#3b82f6] hover:text-white transition-all cursor-pointer disabled:opacity-50 disabled:cursor-default"
           >
-            {loading || loadingSearch ? "Memuat…" : `Muat Lebih Banyak (${allChapters.length}/${totalChapters})`}
+            {loading || loadingSearch
+              ? "Memuat…"
+              : !debouncedQuery && totalChapters > 0
+                ? `Muat Lebih Banyak (${allChapters.length}/${totalChapters})`
+                : "Muat Lebih Banyak"}
           </button>
         </div>
       )}

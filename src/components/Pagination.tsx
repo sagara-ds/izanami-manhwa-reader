@@ -1,7 +1,18 @@
 import Link from "next/link";
 
-function pages(current: number, total?: number): (number | "...")[] {
-  if (total == null) return [current, current + 1];
+function pages(current: number, total?: number, hasNext?: boolean): (number | "...")[] {
+  if (total == null) {
+    const set = new Set<number>([1, current]);
+    if (current > 1) set.add(current - 1);
+    if (hasNext !== false) set.add(current + 1);
+    const sorted = [...set].sort((a, b) => a - b);
+    const out: (number | "...")[] = [];
+    sorted.forEach((p, i) => {
+      if (i > 0 && p - sorted[i - 1] > 1) out.push("...");
+      out.push(p);
+    });
+    return out;
+  }
   if (total <= 1) return [1];
   const set = new Set<number>([1, total]);
   for (let i = Math.max(1, current - 2); i <= Math.min(total, current + 2); i++) set.add(i);
@@ -17,15 +28,17 @@ function pages(current: number, total?: number): (number | "...")[] {
 export function Pagination({
   page,
   totalPages,
+  hasNext,
   makeHref,
 }: {
   page: number;
   totalPages?: number;
+  hasNext?: boolean;
   makeHref: (p: number) => string;
 }) {
-  const list = pages(page, totalPages);
+  const list = pages(page, totalPages, hasNext);
   const canPrev = page > 1;
-  const canNext = totalPages == null || page < totalPages;
+  const canNext = totalPages != null ? page < totalPages : (hasNext ?? true);
   const btn =
     "w-9 h-9 flex items-center justify-center rounded-xl bg-[#18181b] border border-zinc-700/50 text-zinc-300 text-sm transition-all hover:bg-[#3b82f6] hover:border-[#3b82f6] hover:text-white";
   return (

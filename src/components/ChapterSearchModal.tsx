@@ -27,8 +27,7 @@ export function ChapterSearchModal({
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [desc, setDesc] = useState(true);
   const [chapters, setChapters] = useState<ChapterOption[]>([]);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const firstRun = useRef(true);
 
@@ -37,8 +36,7 @@ export function ChapterSearchModal({
     setQuery("");
     setDebouncedQuery("");
     setDesc(true);
-    setPage(1);
-    setTotal(0);
+    setNextCursor(null);
     firstRun.current = true;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -52,18 +50,26 @@ export function ChapterSearchModal({
     };
   }, [open, onClose]);
 
-  const fetchPage = useCallback(
-    async (p: number, q: string, d: boolean, append: boolean) => {
+  const fetchChapters = useCallback(
+    async (cursor: string | null, q: string, d: boolean, append: boolean) => {
       setLoading(true);
       try {
-        const res = await fetch(
-          `/api/chapters/${mangaId}?page=${p}&limit=${PAGE_SIZE}&order=${d ? "desc" : "asc"}&search=${encodeURIComponent(q)}`
-        );
+        const qs = new URLSearchParams({
+          limit: String(PAGE_SIZE),
+          order: d ? "desc" : "asc",
+          search: q,
+        });
+        if (cursor) qs.set("cursor", cursor);
+        const res = await fetch(`/api/chapters/${mangaId}?${qs}`);
         if (res.ok) {
           const data = await res.json();
-          setChapters((prev) => (append ? [...prev, ...(data.chapters ?? [])] : (data.chapters ?? [])));
-          setTotal(data.total ?? 0);
-          setPage(p);
+          const incoming: ChapterOption[] = data.chapters ?? [];
+          setChapters((prev) => {
+            if (!append) return incoming;
+            const seen = new Set(prev.map((c) => c.chapter_id));
+            return [...prev, ...incoming.filter((c) => !seen.has(c.chapter_id))];
+          });
+          setNextCursor(data.nextCursor ?? null);
         }
       } catch {}
       setLoading(false);
@@ -76,14 +82,14 @@ export function ChapterSearchModal({
     if (!open) return;
     if (firstRun.current) {
       firstRun.current = false;
-      void fetchPage(1, "", true, false);
+      void fetchChapters(null, "", true, false);
       return;
     }
     const t = setTimeout(() => {
-      void fetchPage(1, debouncedQuery, desc, false);
+      void fetchChapters(null, debouncedQuery, desc, false);
     }, debouncedQuery ? 400 : 0);
     return () => clearTimeout(t);
-  }, [open, debouncedQuery, desc, fetchPage]);
+  }, [open, debouncedQuery, desc, fetchChapters]);
 
   useEffect(() => {
     if (!open) return;
@@ -93,7 +99,7 @@ export function ChapterSearchModal({
 
   if (!open) return null;
 
-  const hasMore = chapters.length < total;
+  const hasMore = Boolean(nextCursor);
 
   return (
     <div
@@ -110,7 +116,13 @@ export function ChapterSearchModal({
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg sm:text-xl font-extrabold text-white">
-            Search Chapter{total > 0 && <span className="ml-2 text-xs font-bold text-zinc-500">{total}</span>}
+            Search Chapter
+            {chapters.length > 0 && (
+              <span className="ml-2 text-xs font-bold text-zinc-500">
+                {chapters.length}
+                {hasMore ? "+" : ""}
+              </span>
+            )}
           </h2>
           <button
             onClick={onClose}
@@ -169,10 +181,10 @@ export function ChapterSearchModal({
           {loading && <p className="py-4 text-center text-xs text-zinc-500">Memuat…</p>}
           {hasMore && !loading && (
             <button
-              onClick={() => void fetchPage(page + 1, debouncedQuery, desc, true)}
+              onClick={() => void fetchChapters(nextCursor, debouncedQuery, desc, true)}
               className="px-4 py-3 rounded-2xl text-xs font-bold text-[#3b82f6] bg-[#3b82f6]/10 border border-[#3b82f6]/20 hover:bg-[#3b82f6]/20 transition-all cursor-pointer"
             >
-              Muat Lebih Banyak ({chapters.length}/{total})
+              Muat Lebih Banyak
             </button>
           )}
         </div>

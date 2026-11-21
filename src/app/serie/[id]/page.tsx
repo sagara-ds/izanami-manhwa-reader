@@ -35,11 +35,11 @@ export default async function SeriePage({
 
   const detail = await getMangaDetail(id);
   if (!detail) notFound();
-  const firstPage = await getChapterListPaginated(id, 1, 60, "desc");
+  const firstPage = await getChapterListPaginated(id, 60, "desc");
 
   // Sort newest first
   const sortedChapters = [...firstPage.chapters].sort((a, b) => b.chapter_number - a.chapter_number);
-  const totalChapters = firstPage.total > 0 ? firstPage.total : sortedChapters.length;
+  const totalChapters = detail.total_chapters ?? sortedChapters.length;
 
   const genres = safeGenres(detail.taxonomy?.Genre ?? []);
   const type = detail.taxonomy?.Type?.[0]?.name;
@@ -180,7 +180,7 @@ export default async function SeriePage({
 
       <div className="max-w-screen-xl mx-auto px-4 pb-10 w-full flex-1 mt-5">
         {synopsis && <Synopsis text={synopsis} />}
-        <ChapterBrowser mangaId={id} initialChapters={sortedChapters} totalChapters={totalChapters} />
+        <ChapterBrowser mangaId={id} initialChapters={sortedChapters} totalChapters={totalChapters} initialNextCursor={firstPage.nextCursor} />
       </div>
 
       <Footer />

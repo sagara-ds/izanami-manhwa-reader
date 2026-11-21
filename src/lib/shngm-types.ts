@@ -46,6 +46,7 @@ export interface ChapterEntry {
 
 export interface MangaDetail extends MangaItem {
   id: number;
+  total_chapters?: number;
   chapters?: ChapterEntry[];
 }
 
@@ -60,6 +61,7 @@ export interface ChapterDetail {
   chapter_number: number;
   chapter_title: string;
   base_url: string;
+  base_url_low?: string;
   chapter: ChapterImages;
   thumbnail_image_url: string;
   view_count: number;
@@ -93,10 +95,14 @@ export interface AnnouncementItem {
 }
 
 export interface PageMeta {
-  page: number;
-  page_size: number;
-  total_page: number;
-  total_record: number;
+  limit?: number;
+  offset?: number;
+  has_next?: boolean;
+  next_cursor?: string;
+  page?: number;
+  page_size?: number;
+  total_page?: number;
+  total_record?: number;
 }
 
 export interface ApiEnvelope<T> {
